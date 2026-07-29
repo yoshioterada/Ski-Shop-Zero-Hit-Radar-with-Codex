@@ -1,0 +1,57 @@
+{
+  "name": "java-code-review-orchestrator",
+  "version": "0.1.0",
+  "description": "Codex SDK based multi-agent Java source code review orchestrator.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "keywords": [
+    "codex",
+    "code-review",
+    "java",
+    "multi-agent",
+    "openai"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "ACCEPTANCE.md",
+    "package.json"
+  ],
+  "bin": {
+    "code-review": "./dist/cli.js"
+  },
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "ci": "npm run lint && npm run test && npm run coverage && npm run build",
+    "coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e:codex": "RUN_CODEX_E2E=true vitest run test/e2e",
+    "dev": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@openai/codex-sdk": "0.137.0",
+    "commander": "^12.1.0",
+    "fast-glob": "^3.3.3",
+    "gray-matter": "^4.0.3",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.24.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^20.19.25",
+    "@vitest/coverage-v8": "^4.1.8",
+    "eslint": "^9.39.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.1",
+    "vitest": "^4.1.8"
+  }
+}

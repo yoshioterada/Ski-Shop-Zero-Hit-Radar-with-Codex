@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Ski helmet</title>
+  <desc id="desc">A protective ski helmet with vent channels and soft ear pads.</desc>
+  <rect width="640" height="480" fill="#eef6fa"/>
+  <path d="M150 276c0-101 82-183 183-183 96 0 174 72 183 165l-34 78H199z" fill="#1d6f90"/>
+  <path d="M210 250c45-53 106-82 184-89" fill="none" stroke="#a8d7e8" stroke-width="20" stroke-linecap="round"/>
+  <path d="M168 310h356v36c0 21-17 38-38 38H206c-21 0-38-17-38-38z" fill="#102033"/>
+  <circle cx="195" cy="335" r="34" fill="#34546c"/>
+  <circle cx="489" cy="335" r="34" fill="#34546c"/>
+</svg>

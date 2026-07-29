@@ -1,0 +1,175 @@
+.panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #d7e6f0;
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgb(16 32 51 / 7%);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #0e3557;
+}
+
+.titleRow h2 {
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.titleRow svg {
+  color: #0b6fb3;
+}
+
+.helper,
+.selected small,
+.answerBody p,
+.answerBody li {
+  color: #546b7f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.selected {
+  display: grid;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f4f8fb;
+}
+
+.selected span {
+  color: #0b6fb3;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.selected strong {
+  color: #0e3557;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.form {
+  display: grid;
+  gap: 10px;
+}
+
+.form label {
+  color: #244860;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.form textarea {
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  border: 1px solid #b8d5e7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #102033;
+  background: #ffffff;
+  font: inherit;
+  line-height: 1.5;
+}
+
+.form textarea:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.form textarea:disabled {
+  cursor: not-allowed;
+  background: #edf3f7;
+}
+
+.error {
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #8a250f;
+  background: #fff0e9;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.answer {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid #e7eff5;
+  padding-top: 14px;
+}
+
+.answerBody {
+  display: grid;
+  gap: 10px;
+}
+
+.answerBody h3,
+.answerBody h4 {
+  color: #0e3557;
+  line-height: 1.35;
+}
+
+.answerBody h3 {
+  font-size: 17px;
+}
+
+.answerBody h4 {
+  font-size: 15px;
+}
+
+.answerBody ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.answerBody li {
+  padding-left: 2px;
+}
+
+.answerBody strong {
+  color: #183b59;
+  font-weight: 900;
+}
+
+.answerBody hr {
+  width: 100%;
+  height: 1px;
+  border: 0;
+  background: #e7eff5;
+}
+
+.statusRow {
+  display: flex;
+}
+
+.statusRow span {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.LIVE {
+  color: #12613f;
+  background: #def7eb;
+}
+
+.FALLBACK {
+  color: #85510b;
+  background: #fff0cf;
+}
+
+.ERROR {
+  color: #8a250f;
+  background: #fff0e9;
+}

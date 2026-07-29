@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://db:5432/skishop}
+    username: ${SPRING_DATASOURCE_USERNAME:skishop}
+    password: ${SPRING_DATASOURCE_PASSWORD:skishop}
+  flyway:
+    enabled: true
+
+server:
+  port: 8080

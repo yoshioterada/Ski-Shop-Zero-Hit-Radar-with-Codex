@@ -1,0 +1,26 @@
+.badge {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.success {
+  color: #12613f;
+  background: #def7eb;
+}
+
+.warning {
+  color: #85510b;
+  background: #fff0cf;
+}
+
+.muted {
+  color: #516477;
+  background: #e9eef3;
+}

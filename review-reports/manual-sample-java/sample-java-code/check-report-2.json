@@ -1,0 +1,241 @@
+{
+  "target": {
+    "rawTarget": "sample-java-code",
+    "targetKind": "directory",
+    "targetName": "sample-java-code",
+    "repoRoot": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar",
+    "files": [
+      "sample-java-code/pom.xml",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/ErrorResponse.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingRequest.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingResponse.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/HealthResponse.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/SampleJavaCodeApplication.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+      "sample-java-code/src/main/resources/application.yml",
+      "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java"
+    ],
+    "standardsFiles": [
+      "AGENTS.md"
+    ],
+    "designReferenceFiles": []
+  },
+  "verdict": "Rejected",
+  "reviewDate": "2026-06-04T13:01:23.984Z",
+  "agents": [
+    "security",
+    "performance"
+  ],
+  "results": [
+    {
+      "agentId": "security",
+      "threadId": "019e92b7-a2c1-7a20-86e4-bd40edec46ad",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Security review of sample-java-code found no injection, hardcoded secrets, unsafe deserialization, Struts remnants, or entity mass-assignment patterns. The app still fails the security gate because the public API lacks explicit request-size DoS protection, security headers, and rate limiting in the reviewed target.",
+      "findings": [
+        {
+          "id": "security-1",
+          "severity": "Critical",
+          "category": "Denial of Service / OWASP A05 Security Misconfiguration",
+          "title": "No explicit request body size limit for public JSON endpoint",
+          "description": "The public POST /api/greetings endpoint accepts a JSON request body, but the reviewed Spring Boot configuration does not define request body, swallow, multipart, or proxy-level limits. Bean Validation @Size(max = 40) runs only after the request body has already been read and parsed, so oversized requests can still consume memory or connection resources before validation rejects the logical field value.",
+          "targetFile": "sample-java-code/src/main/resources/application.yml",
+          "lineStart": 1,
+          "lineEnd": 6,
+          "evidence": "application.yml only configures server.port and spring.application.name. GreetingController exposes @PostMapping(\"/greetings\") with @RequestBody at sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java:57-58. Targeted rg searches found no max request body, multipart, Tomcat swallow, timeout, gateway, or rate-limit configuration.",
+          "suggestedFix": "Add explicit request limits in application.yml and enforce JSON body limits at the servlet filter, embedded server, gateway, or reverse proxy layer. Example: set server.tomcat.max-swallow-size, server.tomcat.max-http-form-post-size, spring.servlet.multipart.max-file-size/request-size, connection timeouts, and add a small max-body filter for application/json requests.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "security-2",
+          "severity": "High",
+          "category": "Security Headers / OWASP A05 Security Misconfiguration",
+          "title": "Security headers are not configured",
+          "description": "The application has no Spring Security dependency or SecurityFilterChain, and application.yml does not configure equivalent HTTP header hardening. Responses therefore lack an in-target defense for CSP, X-Frame-Options, X-Content-Type-Options, HSTS, Referrer-Policy, Permissions-Policy, and server header suppression. Even for a small public API, these headers are part of the repository's security review standard and reduce browser-based attack impact when endpoints are consumed directly.",
+          "targetFile": "sample-java-code/pom.xml",
+          "lineStart": 25,
+          "lineEnd": 39,
+          "evidence": "pom.xml includes validation, web, and test starters only; no spring-boot-starter-security. application.yml lines 1-6 contain no server-header or header policy configuration. Targeted rg search found no SecurityFilterChain, contentSecurityPolicy, frameOptions, HSTS, referrerPolicy, or permissionsPolicy configuration.",
+          "suggestedFix": "Add spring-boot-starter-security and define a SecurityFilterChain that explicitly permits intended public endpoints while configuring headers: contentTypeOptions, frameOptions deny, CSP default-src 'self', HSTS for TLS deployments, strict-origin-when-cross-origin referrer policy, and permissionsPolicy camera=(), microphone=(), geolocation=(). Also set server.server-header to blank where supported.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "security-3",
+          "severity": "High",
+          "category": "Denial of Service / Rate Limiting",
+          "title": "Public endpoints have no rate limiting",
+          "description": "GET /api/greetings and POST /api/greetings are unauthenticated public endpoints and no rate limiting, throttling filter, or gateway policy is present in the reviewed target. The endpoint is simple, but attackers can still flood it to consume request threads and CPU, especially because POST requires JSON parsing and validation.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+          "lineStart": 45,
+          "lineEnd": 58,
+          "evidence": "GreetingController exposes public GET and POST greeting endpoints. Targeted rg search found no Bucket4j, RateLimiter, rate-limit filter, Spring Cloud Gateway policy, or equivalent throttling configuration in sample-java-code/src/main or pom.xml.",
+          "suggestedFix": "Add a small rate-limiting filter or gateway policy for /api/**, with stricter limits for state-changing methods. For this sample, a per-IP token bucket with conservative defaults and 429 responses is sufficient.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "security-4",
+          "severity": "Medium",
+          "category": "Information Disclosure / Error Hardening",
+          "title": "Production error disclosure settings are not explicit",
+          "description": "The global exception handler sanitizes validation errors, which is good, but the runtime configuration does not explicitly lock down Spring Boot error disclosure settings. Defaults may be safe today, but OSS-quality production configuration should pin server.error.include-stacktrace and server.error.include-message to never so future profile or dependency changes do not expose internal exception details.",
+          "targetFile": "sample-java-code/src/main/resources/application.yml",
+          "lineStart": 1,
+          "lineEnd": 6,
+          "evidence": "application.yml contains only port and application name. GlobalExceptionHandler handles validation exceptions at sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java:24-49, but targeted rg found no include-stacktrace or include-message configuration.",
+          "suggestedFix": "Add server.error.include-stacktrace: never, server.error.include-message: never, and server.error.include-binding-errors: never for production-like profiles. Keep validation responses generic as currently implemented.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "medium"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "security"
+          ],
+          "description": "Decide whether sample-java-code is intentionally a fully public demo API. If yes, document that choice and explicitly permit only /api/health and /api/greetings in SecurityFilterChain while still applying headers, request limits, and rate limiting. If no, add default-deny authentication before publishing.",
+          "recommendedDecisionMaker": "Project maintainer / security owner"
+        }
+      ],
+      "designDeviations": [],
+      "score": 40,
+      "usage": {
+        "inputTokens": 163998,
+        "cachedInputTokens": 125440,
+        "outputTokens": 6943,
+        "reasoningOutputTokens": 2244
+      },
+      "rawMarkdown": "# Source Code Review Report: Security Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ❌ Fail\n- **Finding Count**: Critical: 1 / High: 2 / Medium: 1 / Low: 0\n\n---\n\n## Phase A: Implementation Compliance Check\n\n### OWASP Top 10 Check Results\n| # | Category | Findings | Count | Verdict |\n|---|---|---:|---:|---|\n| A01 | Broken Access Control | No protected resources found, but no SecurityFilterChain/default-deny posture exists. | 0 | ⚠️ |\n| A02 | Cryptographic Failures | No hardcoded secrets or password hashing code found. | 0 | ✅ |\n| A03 | Injection | No SQL/JdbcTemplate/command execution/SSRF client patterns found. | 0 | ✅ |\n| A07 | XSS | No templates/JSP/unescaped HTML output found. JSON reflects input only as JSON. | 0 | ✅ |\n| A08 | Mass Assignment | Uses GreetingRequest DTO; no entity binding found. | 0 | ✅ |\n| A10 | SSRF | No outbound HTTP client usage found. | 0 | ✅ |\n\n### Security Header Check\n| Header | Expected | Actual | Verdict |\n|---|---|---|---|\n| X-Content-Type-Options | nosniff | Not configured in target | ❌ |\n| X-Frame-Options | DENY | Not configured in target | ❌ |\n| Content-Security-Policy | default-src 'self' | Not configured in target | ❌ |\n| Strict-Transport-Security | Enabled on TLS | Not configured in target | ❌ |\n| Referrer-Policy | strict-origin-when-cross-origin | Not configured in target | ❌ |\n| Permissions-Policy | camera=(), microphone=(), geolocation=() | Not configured in target | ❌ |\n| Server | Suppressed | Not configured in target | ⚠️ |\n\n### Hardcoded Secret Check\n| File | Location | Secret Type | Remediation |\n|---|---|---|---|\n| None found | N/A | N/A | N/A |\n\n### Struts Legacy Pattern Check\n| Pattern | Files Found | Risk | Remediation |\n|---|---:|---|---|\n| Struts imports / ActionForm / Action classes | 0 | None found | N/A |\n| request.getParameter direct usage | 0 | None found | N/A |\n| Production @Autowired field injection | 0 | None found | N/A |\n\n---\n\n## Phase B: Attacker's Perspective Attack Resistance Analysis\n\n### STRIDE Attack Resistance Summary\n| STRIDE Category | Scenarios Verified | Sufficient | Insufficient | Unmitigated | Highest Risk |\n|---|---:|---:|---:|---:|---|\n| S: Spoofing | 5 | 1 | 2 | 2 | High |\n| T: Tampering | 7 | 5 | 1 | 1 | Medium |\n| R: Repudiation | 4 | 1 | 2 | 1 | Medium |\n| I: Information Disclosure | 7 | 4 | 2 | 1 | High |\n| D: Denial of Service | 6 | 2 | 2 | 2 | Critical |\n| E: Elevation of Privilege | 6 | 4 | 1 | 1 | High |\n\n### Business Logic Attack Resistance\n| # | Attack Scenario | Target Component | Defense Exists | Risk | Verdict |\n|---|---|---|---|---|---|\n| BL-1..BL-7 | EC checkout, stock, points, coupon, email abuse | Not present in sample app | N/A | Low for target | ✅ |\n\n### Session Management Security\n| # | Attack Scenario | Defense Exists | Risk | Verdict |\n|---|---|---|---|---|\n| SM-1..SM-5 | Session fixation, timeout, concurrent session, cookie flags | No session auth in target; no explicit cookie hardening | Medium if auth is added later | ⚠️ |\n\n### Consolidated Findings\n| # | Severity | Phase | Category | Target File | Line # | Finding |\n|---|---|---|---|---|---:|---|\n| 1 | Critical | B | DoS | sample-java-code/src/main/resources/application.yml | 1 | No explicit request body limits for public JSON endpoint. |\n| 2 | High | A/B | Security Headers | sample-java-code/pom.xml | 25 | No Spring Security/header hardening configuration. |\n| 3 | High | B | Rate Limiting | sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java | 45 | Public endpoints have no rate limiting. |\n| 4 | Medium | A/B | Information Disclosure | sample-java-code/src/main/resources/application.yml | 1 | Error disclosure settings are not explicitly pinned. |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|---|---:|---|\n| Injection Prevention | 5/5 | No injection sinks found. |\n| Authentication/Authorization | 2/5 | No auth surface, but no default-deny SecurityFilterChain. |\n| Secret Management | 5/5 | No secrets found. |\n| Security Headers | 1/5 | Not configured. |\n| CSRF Protection | 2/5 | No cookie auth, but no explicit security posture. |\n| Rate Limiting / DoS Defense | 2/5 | No rate limiting; no explicit body limits. |\n| Spoofing Attack Resistance (S) | 2/5 | No session auth, but no session/cookie hardening. |\n| Tampering Attack Resistance (T) | 4/5 | DTO validation exists; no sensitive business flow. |\n| Information Disclosure Resistance (I) | 3/5 | Generic validation errors, but error hardening not pinned. |\n| Privilege Escalation Resistance (E) | 3/5 | No admin/user resources, but no method/security framework. |\n| Business Logic Attack Resistance | 4/5 | EC flows not present in target. |\n| Session Management Security | 2/5 | Not applicable today, not prepared for session auth. |\n| Struts Legacy Pattern Safety | 5/5 | No Struts remnants found. |\n| **Total Score** | **40/65** | |\n\n## Escalation Items (Requires Human Judgment)\n- Confirm whether the sample API is intentionally public. Public is acceptable for a sample only if explicitly documented and paired with security headers, body limits, rate limiting, and sanitized error configuration.",
+      "startedAt": "2026-06-04T12:59:28.641Z",
+      "completedAt": "2026-06-04T13:01:23.982Z",
+      "durationMs": 115341
+    },
+    {
+      "agentId": "performance",
+      "threadId": "019e92b7-a2be-7401-ac1b-0873e1999a91",
+      "status": "completed",
+      "verdict": "pass",
+      "summary": "Performance review found no actionable issues in sample-java-code. The target is a small stateless Spring Web sample with no JPA, repositories, database access, collection-returning endpoints, pagination surface, or cacheable read model in scope.",
+      "findings": [],
+      "escalations": [],
+      "designDeviations": [],
+      "score": 25,
+      "usage": {
+        "inputTokens": 117405,
+        "cachedInputTokens": 89088,
+        "outputTokens": 3008,
+        "reasoningOutputTokens": 665
+      },
+      "rawMarkdown": "# Source Code Review Report: Performance Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ✅ Pass\n- **Finding Count**: Critical: 0 / High: 0 / Medium: 0 / Low: 0\n\n## N+1 Query Detection Results\n| # | File | Method | Line | Pattern | Fix Suggestion |\n|---|------|--------|------|---------|----------------|\n| - | - | - | - | No JPA entities, repositories, lazy associations, or DB calls found in target source. | - |\n\n## Pagination Check\n| Endpoint | Pagination Present | Default Size | Max Size | Verdict |\n|----------|-------------------|-------------|----------|---------|\n| GET /api/health | N/A | N/A | N/A | Pass: single-object response |\n| GET /api/greetings | N/A | N/A | N/A | Pass: single-object response |\n| POST /api/greetings | N/A | N/A | N/A | Pass: single-object response |\n\n## JPA Query Optimization Check\n| File | Method | readOnly Txn | DTO Projection | exists vs count | Verdict |\n|------|--------|-------------|----------------|-----------------|---------|\n| sample-java-code/pom.xml | dependencies | N/A | N/A | N/A | Pass: no Spring Data JPA/JDBC dependency in lines 25-39 |\n| sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java | greet | N/A | N/A | N/A | Pass: no persistence access |\n\n## Findings\n| # | Severity | Category | Target File | Line | Finding | Fix Code Example |\n|---|----------|----------|-------------|------|---------|-----------------|\n| - | - | - | - | - | No performance findings. | - |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|-----------------|-------------|-------|\n| N+1 Query Prevention | 5/5 | No persistence layer or lazy association access exists in reviewed files. |\n| JPA Query Optimization | 5/5 | No JPA queries, repository calls, in-memory DB filtering, count checks, or duplicate query execution. |\n| Pagination | 5/5 | Reviewed endpoints return single DTOs only; no collection API requiring pagination. |\n| Memory Efficiency | 5/5 | No loop-based string concatenation, redundant stream collection, or obvious hot-path allocation issue. `String.replaceAll` is used on a max-40-character request value, so there is insufficient evidence for an optimization finding. |\n| Cache Strategy | 5/5 | No frequent read query or slow external data source in target scope; caching not applicable. |\n| **Overall Score** | **25/25** | |\n\n## Escalation Items (Requires Human Judgment)\nNone.\n\n## Review Notes\n- Tests were not run because this task requested source review only and no code modifications. Static source inspection was sufficient for the performance checklist in this target.",
+      "startedAt": "2026-06-04T12:59:28.642Z",
+      "completedAt": "2026-06-04T13:00:32.599Z",
+      "durationMs": 63957
+    }
+  ],
+  "findings": [
+    {
+      "id": "security-1",
+      "severity": "Critical",
+      "category": "Denial of Service / OWASP A05 Security Misconfiguration",
+      "title": "No explicit request body size limit for public JSON endpoint",
+      "description": "The public POST /api/greetings endpoint accepts a JSON request body, but the reviewed Spring Boot configuration does not define request body, swallow, multipart, or proxy-level limits. Bean Validation @Size(max = 40) runs only after the request body has already been read and parsed, so oversized requests can still consume memory or connection resources before validation rejects the logical field value.",
+      "targetFile": "sample-java-code/src/main/resources/application.yml",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "evidence": "application.yml only configures server.port and spring.application.name. GreetingController exposes @PostMapping(\"/greetings\") with @RequestBody at sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java:57-58. Targeted rg searches found no max request body, multipart, Tomcat swallow, timeout, gateway, or rate-limit configuration.",
+      "suggestedFix": "Add explicit request limits in application.yml and enforce JSON body limits at the servlet filter, embedded server, gateway, or reverse proxy layer. Example: set server.tomcat.max-swallow-size, server.tomcat.max-http-form-post-size, spring.servlet.multipart.max-file-size/request-size, connection timeouts, and add a small max-body filter for application/json requests.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "security-2",
+      "severity": "High",
+      "category": "Security Headers / OWASP A05 Security Misconfiguration",
+      "title": "Security headers are not configured",
+      "description": "The application has no Spring Security dependency or SecurityFilterChain, and application.yml does not configure equivalent HTTP header hardening. Responses therefore lack an in-target defense for CSP, X-Frame-Options, X-Content-Type-Options, HSTS, Referrer-Policy, Permissions-Policy, and server header suppression. Even for a small public API, these headers are part of the repository's security review standard and reduce browser-based attack impact when endpoints are consumed directly.",
+      "targetFile": "sample-java-code/pom.xml",
+      "lineStart": 25,
+      "lineEnd": 39,
+      "evidence": "pom.xml includes validation, web, and test starters only; no spring-boot-starter-security. application.yml lines 1-6 contain no server-header or header policy configuration. Targeted rg search found no SecurityFilterChain, contentSecurityPolicy, frameOptions, HSTS, referrerPolicy, or permissionsPolicy configuration.",
+      "suggestedFix": "Add spring-boot-starter-security and define a SecurityFilterChain that explicitly permits intended public endpoints while configuring headers: contentTypeOptions, frameOptions deny, CSP default-src 'self', HSTS for TLS deployments, strict-origin-when-cross-origin referrer policy, and permissionsPolicy camera=(), microphone=(), geolocation=(). Also set server.server-header to blank where supported.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "security-3",
+      "severity": "High",
+      "category": "Denial of Service / Rate Limiting",
+      "title": "Public endpoints have no rate limiting",
+      "description": "GET /api/greetings and POST /api/greetings are unauthenticated public endpoints and no rate limiting, throttling filter, or gateway policy is present in the reviewed target. The endpoint is simple, but attackers can still flood it to consume request threads and CPU, especially because POST requires JSON parsing and validation.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+      "lineStart": 45,
+      "lineEnd": 58,
+      "evidence": "GreetingController exposes public GET and POST greeting endpoints. Targeted rg search found no Bucket4j, RateLimiter, rate-limit filter, Spring Cloud Gateway policy, or equivalent throttling configuration in sample-java-code/src/main or pom.xml.",
+      "suggestedFix": "Add a small rate-limiting filter or gateway policy for /api/**, with stricter limits for state-changing methods. For this sample, a per-IP token bucket with conservative defaults and 429 responses is sufficient.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "security-4",
+      "severity": "Medium",
+      "category": "Information Disclosure / Error Hardening",
+      "title": "Production error disclosure settings are not explicit",
+      "description": "The global exception handler sanitizes validation errors, which is good, but the runtime configuration does not explicitly lock down Spring Boot error disclosure settings. Defaults may be safe today, but OSS-quality production configuration should pin server.error.include-stacktrace and server.error.include-message to never so future profile or dependency changes do not expose internal exception details.",
+      "targetFile": "sample-java-code/src/main/resources/application.yml",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "evidence": "application.yml contains only port and application name. GlobalExceptionHandler handles validation exceptions at sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java:24-49, but targeted rg found no include-stacktrace or include-message configuration.",
+      "suggestedFix": "Add server.error.include-stacktrace: never, server.error.include-message: never, and server.error.include-binding-errors: never for production-like profiles. Keep validation responses generic as currently implemented.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "conflicts": [],
+  "adjudications": [],
+  "escalations": [
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "security"
+      ],
+      "description": "Decide whether sample-java-code is intentionally a fully public demo API. If yes, document that choice and explicitly permit only /api/health and /api/greetings in SecurityFilterChain while still applying headers, request limits, and rate limiting. If no, add default-deny authentication before publishing.",
+      "recommendedDecisionMaker": "Project maintainer / security owner"
+    }
+  ],
+  "sdkExecution": {
+    "sdkPackage": "@openai/codex-sdk",
+    "concurrency": 2,
+    "sandboxMode": "read-only",
+    "approvalPolicy": "never",
+    "webSearchMode": "disabled",
+    "modelReasoningEffort": "high"
+  },
+  "outputFiles": {
+    "markdown": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-sample-java/sample-java-code/check-report-2.md",
+    "json": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-sample-java/sample-java-code/check-report-2.json",
+    "events": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-sample-java/sample-java-code/check-report-2.events.jsonl"
+  }
+}

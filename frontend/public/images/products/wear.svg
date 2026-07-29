@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Ski outerwear</title>
+  <desc id="desc">A technical ski jacket with contrasting panels for mountain weather.</desc>
+  <rect width="640" height="480" fill="#edf5f8"/>
+  <path d="M241 110h78l19 35 19-35h78l78 92-50 56-37-32v204H250V226l-38 32-49-56z" fill="#0e6f94"/>
+  <path d="M319 145h39v285h-39z" fill="#102033" opacity=".82"/>
+  <path d="M250 222h176v42H250z" fill="#f4c15d" opacity=".95"/>
+  <path d="M281 110h77l-20 35z" fill="#ffffff" opacity=".72"/>
+</svg>

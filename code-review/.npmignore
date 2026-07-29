@@ -1,0 +1,10 @@
+src/
+test/
+.github/
+coverage/
+*.tgz
+*.log
+tsconfig.json
+vitest.config.ts
+eslint.config.js
+dist/**/*.map

@@ -1,0 +1,378 @@
+{
+  "target": {
+    "rawTarget": "backend",
+    "targetKind": "directory",
+    "targetName": "backend",
+    "repoRoot": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar",
+    "files": [
+      "backend/.dockerignore",
+      "backend/Dockerfile",
+      "backend/pom.xml",
+      "backend/src/main/java/com/codexskishop/BackendApplication.java",
+      "backend/src/main/java/com/codexskishop/config/AdminProperties.java",
+      "backend/src/main/java/com/codexskishop/config/AiProperties.java",
+      "backend/src/main/java/com/codexskishop/config/BearerTokenAuthenticationFilter.java",
+      "backend/src/main/java/com/codexskishop/config/CorsProperties.java",
+      "backend/src/main/java/com/codexskishop/config/RequestLoggingFilter.java",
+      "backend/src/main/java/com/codexskishop/config/SecurityConfig.java",
+      "backend/src/main/java/com/codexskishop/config/SpringAiConfig.java",
+      "backend/src/main/java/com/codexskishop/config/TimeConfig.java",
+      "backend/src/main/java/com/codexskishop/controller/AdminZeroHitController.java",
+      "backend/src/main/java/com/codexskishop/controller/AiConsultController.java",
+      "backend/src/main/java/com/codexskishop/controller/AuthController.java",
+      "backend/src/main/java/com/codexskishop/controller/ProductController.java",
+      "backend/src/main/java/com/codexskishop/domain/KeywordNormalizer.java",
+      "backend/src/main/java/com/codexskishop/domain/OpportunityLossCalculator.java",
+      "backend/src/main/java/com/codexskishop/domain/ZeroHitPriorityDecider.java",
+      "backend/src/main/java/com/codexskishop/dto/AdminUserDto.java",
+      "backend/src/main/java/com/codexskishop/dto/AiConsultRequest.java",
+      "backend/src/main/java/com/codexskishop/dto/AiConsultResponse.java",
+      "backend/src/main/java/com/codexskishop/dto/AuthMeResponse.java",
+      "backend/src/main/java/com/codexskishop/dto/LoginRequest.java",
+      "backend/src/main/java/com/codexskishop/dto/LoginResponse.java",
+      "backend/src/main/java/com/codexskishop/dto/ProductDto.java",
+      "backend/src/main/java/com/codexskishop/dto/ProductListResponse.java",
+      "backend/src/main/java/com/codexskishop/dto/ProductSearchResponse.java",
+      "backend/src/main/java/com/codexskishop/dto/ProviderStatus.java",
+      "backend/src/main/java/com/codexskishop/dto/ZeroHitItemDto.java",
+      "backend/src/main/java/com/codexskishop/dto/ZeroHitListResponse.java",
+      "backend/src/main/java/com/codexskishop/dto/ZeroHitSummaryDto.java",
+      "backend/src/main/java/com/codexskishop/entity/Priority.java",
+      "backend/src/main/java/com/codexskishop/entity/Product.java",
+      "backend/src/main/java/com/codexskishop/entity/StockStatus.java",
+      "backend/src/main/java/com/codexskishop/entity/ZeroHitSearch.java",
+      "backend/src/main/java/com/codexskishop/exception/ApiErrorResponse.java",
+      "backend/src/main/java/com/codexskishop/exception/ApiErrorWriter.java",
+      "backend/src/main/java/com/codexskishop/exception/AuthenticationFailedException.java",
+      "backend/src/main/java/com/codexskishop/exception/GlobalExceptionHandler.java",
+      "backend/src/main/java/com/codexskishop/repository/ProductRepository.java",
+      "backend/src/main/java/com/codexskishop/repository/ZeroHitSearchRepository.java",
+      "backend/src/main/java/com/codexskishop/service/AdminAuthService.java",
+      "backend/src/main/java/com/codexskishop/service/AiConsultationService.java",
+      "backend/src/main/java/com/codexskishop/service/AiPromptBuilder.java",
+      "backend/src/main/java/com/codexskishop/service/AiPromptContext.java",
+      "backend/src/main/java/com/codexskishop/service/AiProviderClient.java",
+      "backend/src/main/java/com/codexskishop/service/AiProviderException.java",
+      "backend/src/main/java/com/codexskishop/service/ProductMapper.java",
+      "backend/src/main/java/com/codexskishop/service/ProductQueryService.java",
+      "backend/src/main/java/com/codexskishop/service/ProductRequestOptions.java",
+      "backend/src/main/java/com/codexskishop/service/ProductSearchService.java",
+      "backend/src/main/java/com/codexskishop/service/ProductSpecifications.java",
+      "backend/src/main/java/com/codexskishop/service/SpringAiProviderClient.java",
+      "backend/src/main/java/com/codexskishop/service/ZeroHitMapper.java",
+      "backend/src/main/java/com/codexskishop/service/ZeroHitQueryService.java",
+      "backend/src/main/java/com/codexskishop/service/ZeroHitRecordingService.java",
+      "backend/src/main/resources/application-docker.yml",
+      "backend/src/main/resources/application.yml",
+      "backend/src/main/resources/db/migration/V1__create_products_and_zero_hit_searches.sql",
+      "backend/src/main/resources/db/migration/V2__seed_products.sql",
+      "backend/src/test/java/com/codexskishop/BackendApplicationTests.java",
+      "backend/src/test/java/com/codexskishop/config/FixedClockTestConfig.java",
+      "backend/src/test/java/com/codexskishop/controller/AdminZeroHitApiIntegrationTests.java",
+      "backend/src/test/java/com/codexskishop/controller/AiConsultApiIntegrationTests.java",
+      "backend/src/test/java/com/codexskishop/controller/AiConsultProviderErrorIntegrationTests.java",
+      "backend/src/test/java/com/codexskishop/controller/AuthApiIntegrationTests.java",
+      "backend/src/test/java/com/codexskishop/controller/BackendJourneyIntegrationTests.java",
+      "backend/src/test/java/com/codexskishop/controller/ExpiredTokenIntegrationTests.java",
+      "backend/src/test/java/com/codexskishop/controller/FrontendContractIntegrationTests.java",
+      "backend/src/test/java/com/codexskishop/controller/ProductApiIntegrationTests.java",
+      "backend/src/test/java/com/codexskishop/domain/ZeroHitDomainTests.java",
+      "backend/src/test/java/com/codexskishop/entity/EntityLifecycleTests.java",
+      "backend/src/test/java/com/codexskishop/repository/RepositoryIntegrationTests.java",
+      "backend/src/test/java/com/codexskishop/service/AdminAuthServiceTests.java",
+      "backend/src/test/java/com/codexskishop/service/AiConsultationServiceTests.java",
+      "backend/src/test/java/com/codexskishop/service/AiPromptBuilderTests.java",
+      "backend/src/test/java/com/codexskishop/service/ProductRequestOptionsTests.java",
+      "backend/src/test/java/com/codexskishop/service/ZeroHitRecordingServiceIntegrationTests.java",
+      "backend/src/test/resources/application-test.yml"
+    ],
+    "standardsFiles": [
+      "AGENTS.md"
+    ],
+    "designReferenceFiles": []
+  },
+  "verdict": "Rejected",
+  "reviewDate": "2026-06-04T13:19:32.153Z",
+  "agents": [
+    "java-standards"
+  ],
+  "results": [
+    {
+      "agentId": "java-standards",
+      "threadId": "019e92c7-4e45-7a23-8bbe-918ba77221fb",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Java 21 coding standards review failed for backend. Critical placeholder/sample artifacts remain in src/main, and there are additional High issues around package/version standard alignment, missing service interfaces, and ambiguous nullable contracts.",
+      "findings": [
+        {
+          "id": "java-standards-1",
+          "severity": "Critical",
+          "category": "Incomplete / Shortcut Implementation",
+          "title": "Placeholder/sample artifacts remain in production source and seed data",
+          "description": "The standards prohibit placeholder/sample/dummy artifacts in src/main unless seed data is explicitly justified. Production DTO documentation calls the price a sample price and the image URL a placeholder, and the production Flyway seed migration stores placeholder image paths for products without an explanatory exemption.",
+          "targetFile": "backend/src/main/java/com/codexskishop/dto/ProductDto.java",
+          "lineStart": 15,
+          "lineEnd": 17,
+          "evidence": "ProductDto.java:15 `@param price JPY sample price`; ProductDto.java:17 `@param imageUrl optional placeholder image URL`; V2__seed_products.sql:2 starts repeated `/images/products/*-placeholder.png` values through the seed migration.",
+          "suggestedFix": "Replace placeholder/sample wording and image paths with real OSS-safe product asset URLs, or add an explicit seed-data rationale and make the DTO describe the actual contract rather than placeholder behavior.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-2",
+          "severity": "High",
+          "category": "Spring Boot Standard",
+          "title": "Spring Boot version does not match the 3.2.x review baseline",
+          "description": "The agent standard is Java 21 / Spring Boot 3.2.x, but the backend parent is Spring Boot 3.5.8. This is a project-wide standards deviation and may invalidate assumptions about APIs and behavior for the migration baseline.",
+          "targetFile": "backend/pom.xml",
+          "lineStart": 8,
+          "lineEnd": 8,
+          "evidence": "`<version>3.5.8</version>` under `spring-boot-starter-parent`.",
+          "suggestedFix": "Align the parent to the approved Spring Boot 3.2.x line, or explicitly update the governing standard and compatibility expectations if 3.5.x is intentional.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-3",
+          "severity": "High",
+          "category": "Naming Conventions",
+          "title": "Base package does not match required com.skishop namespace",
+          "description": "The review standard states the migration base package is `com.skishop`, but production Java packages and Maven groupId use `com.codexskishop`. Package naming is a High-severity standards item.",
+          "targetFile": "backend/src/main/java/com/codexskishop/BackendApplication.java",
+          "lineStart": 1,
+          "lineEnd": 1,
+          "evidence": "`package com.codexskishop;`; pom.xml:11 also uses `<groupId>com.codexskishop</groupId>`.",
+          "suggestedFix": "Rename packages and Maven groupId to the required `com.skishop` namespace, or record an approved standards exception if `com.codexskishop` is the intended OSS namespace.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "java-standards-4",
+          "severity": "High",
+          "category": "DI Pattern Quality",
+          "title": "DI-managed service classes do not define corresponding interfaces",
+          "description": "The DI checklist requires all Service / Repository classes to have corresponding interfaces. Repositories are interfaces, but multiple `@Service` classes are concrete-only and are injected by concrete type, reducing consistency and substitutability.",
+          "targetFile": "backend/src/main/java/com/codexskishop/service/ProductQueryService.java",
+          "lineStart": 18,
+          "lineEnd": 18,
+          "evidence": "Concrete-only services include ProductQueryService.java:18, AdminAuthService.java:26, ProductSearchService.java:19, ZeroHitRecordingService.java:25, AiConsultationService.java:19, and ZeroHitQueryService.java:23.",
+          "suggestedFix": "Introduce focused service interfaces such as `ProductQueryUseCase`, `ProductSearchUseCase`, `AdminAuthUseCase`, and inject those interfaces at controller/filter boundaries while keeping implementations package-consistent.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-5",
+          "severity": "High",
+          "category": "Null Safety",
+          "title": "Nullable public contracts are handled implicitly without nullability annotations",
+          "description": "Several public service/helper methods accept null and branch on it, but parameters are not annotated with `@Nullable` or `@NonNull`. The null-safety checklist requires annotations where ambiguity exists.",
+          "targetFile": "backend/src/main/java/com/codexskishop/service/ProductRequestOptions.java",
+          "lineStart": 28,
+          "lineEnd": 28,
+          "evidence": "`toPageable(Integer limit, String sort)` handles nullable values; `normalizeCategories(String category)` line 58 handles null; `ProductQueryService.listProducts(...)` line 37 and `ProductSearchService.search(...)` line 44 pass nullable request values; `KeywordNormalizer.normalize(String keyword)` line 19 accepts null.",
+          "suggestedFix": "Add explicit nullability annotations to nullable parameters, preferably at the boundary and helper methods, and use non-null annotations for required parameters/returns where ambiguity remains.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-6",
+          "severity": "Medium",
+          "category": "Naming Conventions",
+          "title": "Boolean DTO components do not use is/has/can/should prefixes",
+          "description": "Boolean fields/accessors should use `is/has/can/should` prefixes. Record components generate accessors named after the component, so `success()`, `authenticated()`, and `zeroHitRecorded()` do not follow the boolean naming rule.",
+          "targetFile": "backend/src/main/java/com/codexskishop/dto/LoginResponse.java",
+          "lineStart": 10,
+          "lineEnd": 10,
+          "evidence": "LoginResponse.java:10 `boolean success`; AuthMeResponse.java:9 `boolean authenticated`; ProductSearchResponse.java:12 `boolean zeroHitRecorded`.",
+          "suggestedFix": "Rename to boolean components such as `isSuccess`, `isAuthenticated`, and `hasZeroHitRecorded` or document an API-contract exception and update frontend/tests together if renamed.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "high",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "description": "Decide whether `com.codexskishop` and Spring Boot 3.5.8 are intentional project standards changes or must be realigned to the agent baseline (`com.skishop`, Spring Boot 3.2.x).",
+          "recommendedDecisionMaker": "Project maintainer / migration architect"
+        },
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "description": "Decide whether product seed data is acceptable as demo seed data with explicit documentation, or whether placeholder image paths must be replaced with real OSS-safe assets before release.",
+          "recommendedDecisionMaker": "Product owner / OSS release owner"
+        }
+      ],
+      "designDeviations": [
+        {
+          "document": "agent-definition: Java 21 / Spring Boot 3.2.x coding standards",
+          "description": "Backend uses Spring Boot 3.5.8 instead of the required 3.2.x baseline.",
+          "targetFile": "backend/pom.xml"
+        },
+        {
+          "document": "agent-definition: Project context base package",
+          "description": "Backend uses `com.codexskishop` instead of the stated base package `com.skishop`.",
+          "targetFile": "backend/src/main/java/com/codexskishop/BackendApplication.java"
+        }
+      ],
+      "score": 13,
+      "usage": {
+        "inputTokens": 533466,
+        "cachedInputTokens": 468992,
+        "outputTokens": 10369,
+        "reasoningOutputTokens": 3570
+      },
+      "rawMarkdown": "# Source Code Review Report: Java 21 Coding Standards Review\n\n## Summary\n- **Review Target**: backend\n- **Verdict**: ❌ Fail\n- **Issue Count**: Critical: 1 / High: 4 / Medium: 1 / Low: 0\n\n## Prohibited Pattern Detection Results\n| # | Pattern | Count | Target File | Line # |\n|---|---------|-------|-------------|--------|\n| 1 | Placeholder/sample artifacts in src/main | 2 Java comment hits plus repeated SQL seed values | `backend/src/main/java/com/codexskishop/dto/ProductDto.java`; `backend/src/main/resources/db/migration/V2__seed_products.sql` | 15, 17, 2 |\n\nNo evidence found for `System.out.println`, `System.err.println`, `printStackTrace()`, empty `catch (Exception)`, direct `new RestTemplate()`, `Thread.sleep()`, field injection, `UnsupportedOperationException`, collection `return null`, raw collection declarations, or unsafe `Optional.get()` in the reviewed Java sources.\n\n## Incomplete / Shortcut Implementation Detection Results\n| # | Type | Detection | Target File | Line # | Details |\n|---|------|-----------|-------------|--------|---------|\n| 1 | Placeholder/sample production artifact | `sample price`, `placeholder image URL`, repeated `*-placeholder.png` seed image paths | `ProductDto.java`; `V2__seed_products.sql` | 15, 17, 2 | Production API/seed data still carries placeholder semantics without an explicit seed-data exemption. |\n\n## Naming Convention Check Results\n| File | Violation Location | Current Name | Recommended Name |\n|------|-------------------|-------------|------------------|\n| `backend/src/main/java/com/codexskishop/BackendApplication.java` | package declaration | `com.codexskishop` | `com.skishop` per review baseline, unless exception approved |\n| `backend/src/main/java/com/codexskishop/dto/LoginResponse.java` | record component | `success` | `isSuccess` |\n| `backend/src/main/java/com/codexskishop/dto/AuthMeResponse.java` | record component | `authenticated` | `isAuthenticated` |\n| `backend/src/main/java/com/codexskishop/dto/ProductSearchResponse.java` | record component | `zeroHitRecorded` | `hasZeroHitRecorded` |\n\n## Issues\n| # | Severity | Category | Target File | Line # | Issue Description | Fix Example |\n|---|----------|----------|-------------|--------|-------------------|-------------|\n| 1 | Critical | Incomplete / Shortcut Implementation | `backend/src/main/java/com/codexskishop/dto/ProductDto.java` | 15 | Production source says `JPY sample price`; seed data also uses placeholder image paths. | Replace with real contract wording/assets or add explicit seed-data rationale. |\n| 2 | High | Spring Boot Standard | `backend/pom.xml` | 8 | Parent version is Spring Boot 3.5.8, not the 3.2.x baseline. | Align to approved 3.2.x or update the governing standard. |\n| 3 | High | Naming Conventions | `backend/src/main/java/com/codexskishop/BackendApplication.java` | 1 | Package root is `com.codexskishop`, not `com.skishop`. | Rename package/groupId or approve a standards exception. |\n| 4 | High | DI Pattern Quality | `backend/src/main/java/com/codexskishop/service/ProductQueryService.java` | 18 | Concrete-only services lack corresponding interfaces. | Define use-case interfaces and inject through them. |\n| 5 | High | Null Safety | `backend/src/main/java/com/codexskishop/service/ProductRequestOptions.java` | 28 | Nullable parameters are accepted without nullability annotations. | Add `@Nullable` / non-null annotations consistently. |\n| 6 | Medium | Naming Conventions | `backend/src/main/java/com/codexskishop/dto/LoginResponse.java` | 10 | Boolean record components do not use required boolean prefixes. | Rename to `isSuccess`, `isAuthenticated`, `hasZeroHitRecorded`, with API/test updates. |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|----------------|-------------|-------|\n| Naming Conventions | 2/5 | Package baseline mismatch and boolean DTO naming violations. |\n| Java 21 Feature Adoption | 4/5 | Records, switch expressions, and text blocks are used appropriately; no major legacy Java syntax found. |\n| Prohibited Pattern Compliance | 1/5 | Critical placeholder/sample artifacts remain in src/main. |\n| DI Pattern Quality | 3/5 | Constructor injection and final fields are good, but service interfaces are missing. |\n| Null Safety | 3/5 | Optional returns and empty collections are generally good, but nullable contracts are not annotated. |\n| **Total Score** | **13/25** | Fail due to Critical finding. |\n\n## Escalation Items (Requires Human Judgment)\n- Confirm whether `com.codexskishop` and Spring Boot 3.5.8 are approved deviations from the stated baseline.\n- Confirm whether placeholder product image seed data is acceptable for OSS demo release or must be replaced before publication.",
+      "startedAt": "2026-06-04T13:16:35.221Z",
+      "completedAt": "2026-06-04T13:19:32.152Z",
+      "durationMs": 176931
+    }
+  ],
+  "findings": [
+    {
+      "id": "java-standards-1",
+      "severity": "Critical",
+      "category": "Incomplete / Shortcut Implementation",
+      "title": "Placeholder/sample artifacts remain in production source and seed data",
+      "description": "The standards prohibit placeholder/sample/dummy artifacts in src/main unless seed data is explicitly justified. Production DTO documentation calls the price a sample price and the image URL a placeholder, and the production Flyway seed migration stores placeholder image paths for products without an explanatory exemption.",
+      "targetFile": "backend/src/main/java/com/codexskishop/dto/ProductDto.java",
+      "lineStart": 15,
+      "lineEnd": 17,
+      "evidence": "ProductDto.java:15 `@param price JPY sample price`; ProductDto.java:17 `@param imageUrl optional placeholder image URL`; V2__seed_products.sql:2 starts repeated `/images/products/*-placeholder.png` values through the seed migration.",
+      "suggestedFix": "Replace placeholder/sample wording and image paths with real OSS-safe product asset URLs, or add an explicit seed-data rationale and make the DTO describe the actual contract rather than placeholder behavior.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-2",
+      "severity": "High",
+      "category": "Spring Boot Standard",
+      "title": "Spring Boot version does not match the 3.2.x review baseline",
+      "description": "The agent standard is Java 21 / Spring Boot 3.2.x, but the backend parent is Spring Boot 3.5.8. This is a project-wide standards deviation and may invalidate assumptions about APIs and behavior for the migration baseline.",
+      "targetFile": "backend/pom.xml",
+      "lineStart": 8,
+      "lineEnd": 8,
+      "evidence": "`<version>3.5.8</version>` under `spring-boot-starter-parent`.",
+      "suggestedFix": "Align the parent to the approved Spring Boot 3.2.x line, or explicitly update the governing standard and compatibility expectations if 3.5.x is intentional.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-3",
+      "severity": "High",
+      "category": "Naming Conventions",
+      "title": "Base package does not match required com.skishop namespace",
+      "description": "The review standard states the migration base package is `com.skishop`, but production Java packages and Maven groupId use `com.codexskishop`. Package naming is a High-severity standards item.",
+      "targetFile": "backend/src/main/java/com/codexskishop/BackendApplication.java",
+      "lineStart": 1,
+      "lineEnd": 1,
+      "evidence": "`package com.codexskishop;`; pom.xml:11 also uses `<groupId>com.codexskishop</groupId>`.",
+      "suggestedFix": "Rename packages and Maven groupId to the required `com.skishop` namespace, or record an approved standards exception if `com.codexskishop` is the intended OSS namespace.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "java-standards-4",
+      "severity": "High",
+      "category": "DI Pattern Quality",
+      "title": "DI-managed service classes do not define corresponding interfaces",
+      "description": "The DI checklist requires all Service / Repository classes to have corresponding interfaces. Repositories are interfaces, but multiple `@Service` classes are concrete-only and are injected by concrete type, reducing consistency and substitutability.",
+      "targetFile": "backend/src/main/java/com/codexskishop/service/ProductQueryService.java",
+      "lineStart": 18,
+      "lineEnd": 18,
+      "evidence": "Concrete-only services include ProductQueryService.java:18, AdminAuthService.java:26, ProductSearchService.java:19, ZeroHitRecordingService.java:25, AiConsultationService.java:19, and ZeroHitQueryService.java:23.",
+      "suggestedFix": "Introduce focused service interfaces such as `ProductQueryUseCase`, `ProductSearchUseCase`, `AdminAuthUseCase`, and inject those interfaces at controller/filter boundaries while keeping implementations package-consistent.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-5",
+      "severity": "High",
+      "category": "Null Safety",
+      "title": "Nullable public contracts are handled implicitly without nullability annotations",
+      "description": "Several public service/helper methods accept null and branch on it, but parameters are not annotated with `@Nullable` or `@NonNull`. The null-safety checklist requires annotations where ambiguity exists.",
+      "targetFile": "backend/src/main/java/com/codexskishop/service/ProductRequestOptions.java",
+      "lineStart": 28,
+      "lineEnd": 28,
+      "evidence": "`toPageable(Integer limit, String sort)` handles nullable values; `normalizeCategories(String category)` line 58 handles null; `ProductQueryService.listProducts(...)` line 37 and `ProductSearchService.search(...)` line 44 pass nullable request values; `KeywordNormalizer.normalize(String keyword)` line 19 accepts null.",
+      "suggestedFix": "Add explicit nullability annotations to nullable parameters, preferably at the boundary and helper methods, and use non-null annotations for required parameters/returns where ambiguity remains.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-6",
+      "severity": "Medium",
+      "category": "Naming Conventions",
+      "title": "Boolean DTO components do not use is/has/can/should prefixes",
+      "description": "Boolean fields/accessors should use `is/has/can/should` prefixes. Record components generate accessors named after the component, so `success()`, `authenticated()`, and `zeroHitRecorded()` do not follow the boolean naming rule.",
+      "targetFile": "backend/src/main/java/com/codexskishop/dto/LoginResponse.java",
+      "lineStart": 10,
+      "lineEnd": 10,
+      "evidence": "LoginResponse.java:10 `boolean success`; AuthMeResponse.java:9 `boolean authenticated`; ProductSearchResponse.java:12 `boolean zeroHitRecorded`.",
+      "suggestedFix": "Rename to boolean components such as `isSuccess`, `isAuthenticated`, and `hasZeroHitRecorded` or document an API-contract exception and update frontend/tests together if renamed.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "conflicts": [],
+  "adjudications": [],
+  "escalations": [
+    {
+      "priority": "high",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "description": "Decide whether `com.codexskishop` and Spring Boot 3.5.8 are intentional project standards changes or must be realigned to the agent baseline (`com.skishop`, Spring Boot 3.2.x).",
+      "recommendedDecisionMaker": "Project maintainer / migration architect"
+    },
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "description": "Decide whether product seed data is acceptable as demo seed data with explicit documentation, or whether placeholder image paths must be replaced with real OSS-safe assets before release.",
+      "recommendedDecisionMaker": "Product owner / OSS release owner"
+    }
+  ],
+  "sdkExecution": {
+    "sdkPackage": "@openai/codex-sdk",
+    "concurrency": 1,
+    "sandboxMode": "read-only",
+    "approvalPolicy": "never",
+    "webSearchMode": "disabled",
+    "modelReasoningEffort": "high"
+  },
+  "outputFiles": {
+    "markdown": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-backend-java-standards/backend/check-report-1.md",
+    "json": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-backend-java-standards/backend/check-report-1.json",
+    "events": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-backend-java-standards/backend/check-report-1.events.jsonl"
+  }
+}

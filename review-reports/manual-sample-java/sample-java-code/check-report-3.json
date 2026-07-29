@@ -1,0 +1,1821 @@
+{
+  "target": {
+    "rawTarget": "sample-java-code",
+    "targetKind": "directory",
+    "targetName": "sample-java-code",
+    "repoRoot": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar",
+    "files": [
+      "sample-java-code/pom.xml",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/ErrorResponse.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingRequest.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingResponse.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/HealthResponse.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/SampleJavaCodeApplication.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+      "sample-java-code/src/main/resources/application.yml",
+      "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java"
+    ],
+    "standardsFiles": [
+      "AGENTS.md"
+    ],
+    "designReferenceFiles": []
+  },
+  "verdict": "Rejected",
+  "reviewDate": "2026-06-04T13:04:55.056Z",
+  "agents": [
+    "tech-lead",
+    "architecture",
+    "ddd-domain",
+    "api-endpoint",
+    "java-standards",
+    "async-concurrency",
+    "error-logging",
+    "data-access",
+    "config-di",
+    "security",
+    "dependency",
+    "test-quality",
+    "performance",
+    "resilience"
+  ],
+  "results": [
+    {
+      "agentId": "tech-lead",
+      "threadId": "019e92b9-7d9c-71f2-a505-652f4ee02a34",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Tech-lead review of sample-java-code found two zero-tolerance prohibited pattern violations in test code and one API error-response consistency gap. Main production layering is otherwise simple and consistent with Controller → Service separation; no design reference files were provided.",
+      "findings": [
+        {
+          "id": "tech-lead-1",
+          "severity": "Critical",
+          "category": "Prohibited Pattern",
+          "title": "Field injection with @Autowired is used in test code",
+          "description": "The zero-tolerance checklist prohibits @Autowired field injection anywhere in the target. GreetingControllerTest injects MockMvc into a mutable field instead of using constructor injection.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 21,
+          "lineEnd": 22,
+          "evidence": "@Autowired\nprivate MockMvc mockMvc;",
+          "suggestedFix": "Use JUnit 5 constructor injection: `GreetingControllerTest(MockMvc mockMvc) { this.mockMvc = mockMvc; }` with a `private final MockMvc mockMvc;` field.",
+          "sourceAgents": [
+            "tech-lead"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "tech-lead-2",
+          "severity": "Critical",
+          "category": "Prohibited Pattern",
+          "title": "Spring Service is directly instantiated with new",
+          "description": "The zero-tolerance checklist prohibits direct instantiation of DI-target Service classes. GreetingServiceTest creates `new GreetingService()` directly instead of obtaining the service through Spring or isolating the pure logic outside a Spring-managed Service.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+          "lineStart": 10,
+          "lineEnd": 10,
+          "evidence": "private final GreetingService greetingService = new GreetingService();",
+          "suggestedFix": "For strict compliance, use Spring-managed construction such as `@SpringBootTest` constructor injection, or move pure normalization/greeting logic into a non-Spring domain helper that can be instantiated directly while keeping `GreetingService` injected.",
+          "sourceAgents": [
+            "tech-lead"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "tech-lead-3",
+          "severity": "Medium",
+          "category": "API Consistency",
+          "title": "Some invalid requests can bypass the unified ErrorResponse shape",
+          "description": "GlobalExceptionHandler centralizes several validation exceptions, but the GET endpoint has a required `name` query parameter. If the parameter is omitted, Spring MVC raises MissingServletRequestParameterException, which is not handled here and can fall back to Spring Boot's default error body instead of the project's ErrorResponse contract.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+          "lineStart": 24,
+          "lineEnd": 47,
+          "evidence": "Handlers exist for MethodArgumentNotValidException, HandlerMethodValidationException, and ConstraintViolationException only; GreetingController requires `@RequestParam ... String name` at line 47.",
+          "suggestedFix": "Add an `@ExceptionHandler(MissingServletRequestParameterException.class)` that returns the same sanitized `ErrorResponse`, and add a MockMvc test for `/api/greetings` without `name`.",
+          "sourceAgents": [
+            "tech-lead"
+          ],
+          "confidence": "medium"
+        }
+      ],
+      "escalations": [],
+      "designDeviations": [],
+      "score": 12,
+      "usage": {
+        "inputTokens": 121922,
+        "cachedInputTokens": 83456,
+        "outputTokens": 4239,
+        "reasoningOutputTokens": 1207
+      },
+      "rawMarkdown": "# Source Code Review Report: Tech Lead\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ❌ Fail\n- **Finding Count**: Critical: 2 / High: 0 / Medium: 1 / Low: 0\n\n## Prohibited Pattern Check Results\n| # | Prohibited Pattern | Detection Count | Target File | Line |\n|---|---|---:|---|---:|\n| 5 | `new Service()` direct instantiation | 1 | `sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java` | 10 |\n| 6 | `@Autowired` field injection | 1 | `sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java` | 21 |\n\n## Design Document Alignment\n| Design Document | Alignment Status | Deviation Details |\n|---|---|---|\n| Design reference files | Not provided | No design reference files were supplied for this review target. Production code follows a simple Controller → Service structure; there are no repositories, entities, or domain events in scope. |\n| Root/Java AGENTS guidance | Mostly aligned | DTOs use records, Bean Validation is used, exceptions are centralized, Java 21/Spring Boot conventions are mostly followed. Test code violates the explicit prohibited-pattern checklist. |\n\n## Findings\n| # | Severity | Category | Target File | Line | Finding | Fix Code Example |\n|---|---|---|---|---:|---|---|\n| 1 | Critical | Prohibited Pattern | `sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java` | 21 | `@Autowired` field injection is prohibited by the tech-lead checklist. | `private final MockMvc mockMvc; GreetingControllerTest(MockMvc mockMvc) { this.mockMvc = mockMvc; }` |\n| 2 | Critical | Prohibited Pattern | `sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java` | 10 | `GreetingService` is directly instantiated with `new`, violating the direct Service instantiation prohibition. | Use Spring-managed test injection or move pure logic to a non-Spring helper for direct unit testing. |\n| 3 | Medium | API Consistency | `sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java` | 24 | Missing required query parameter errors are not covered by the unified `ErrorResponse` handler set. | Add `@ExceptionHandler(MissingServletRequestParameterException.class)` returning `badRequest()`, plus a MockMvc test. |\n\n## Inter-Agent Conflict Arbitration\nNo inter-agent conflicts were provided.\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|---|---:|---|\n| Prohibited Pattern Compliance | 2/5 | Two zero-tolerance violations in target test files. |\n| Design Document Alignment | 3/5 | No design docs supplied; simple layering is reasonable for the sample scope. |\n| Code Consistency | 3/5 | Production patterns are consistent, but error handling has an uncovered invalid-input path. |\n| Naming Convention Compliance | 4/5 | Naming and package conventions are consistent in reviewed files. |\n| **Overall Score** | **12/20** | Fails due to Critical prohibited-pattern findings. |\n\n## Escalation Items\nNone.\n\n## Verification Notes\nStatic source review only. Build/tests were not executed because this review task requested no file modifications and the current sandbox is read-only.",
+      "startedAt": "2026-06-04T13:01:30.260Z",
+      "completedAt": "2026-06-04T13:02:47.591Z",
+      "durationMs": 77331
+    },
+    {
+      "agentId": "architecture",
+      "threadId": "019e92b9-7db9-7402-a5e8-958aaaa2614a",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Architecture review found one critical reverse dependency from service to API/presentation types, plus package-structure and Spring configuration gaps against the requested review contract.",
+      "findings": [
+        {
+          "id": "architecture-1",
+          "severity": "Critical",
+          "category": "Layer Dependency Direction",
+          "title": "Service layer depends on API/presentation DTO",
+          "description": "`GreetingService` imports and returns `GreetingResponse` from the `api` package. This reverses the intended boundary because service code is now coupled to presentation/API contract types instead of staying independent beneath the controller/API layer.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+          "lineStart": 3,
+          "lineEnd": 24,
+          "evidence": "Line 3 imports `com.codexskishop.sample.api.GreetingResponse`; lines 19 and 24 expose that API DTO from the service method.",
+          "suggestedFix": "Move response DTOs to `dto/response` and import from there, or have `GreetingService` return a domain/value result such as `String` and let the controller map it to `GreetingResponse`.",
+          "sourceAgents": [
+            "architecture"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "architecture-2",
+          "severity": "High",
+          "category": "Project Structure",
+          "title": "Controller, DTOs, and exception advice are collapsed into one `api` package",
+          "description": "The target keeps `GreetingController`, request/response records, error response, and `GlobalExceptionHandler` in `com.codexskishop.sample.api`. The required architecture separates these responsibilities into `controller`, `dto/request`, `dto/response`, and `exception`, which makes package boundaries explicit and prevents layer bleed.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+          "lineStart": 1,
+          "lineEnd": 1,
+          "evidence": "All API-facing classes declare `package com.codexskishop.sample.api;`; directory scan shows only `api` and `service` packages under `src/main/java/com/codexskishop/sample`.",
+          "suggestedFix": "Move `GreetingController` to `controller`, `GreetingRequest` to `dto/request`, `GreetingResponse`, `HealthResponse`, and `ErrorResponse` to `dto/response`, and `GlobalExceptionHandler` to `exception`.",
+          "sourceAgents": [
+            "architecture"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "architecture-3",
+          "severity": "High",
+          "category": "Spring Boot Configuration",
+          "title": "No Spring Security configuration is present",
+          "description": "The architecture checklist requires a `config/SecurityConfig.java` with `@Configuration`, `@EnableWebSecurity`, and a `SecurityFilterChain` bean. The target has no `config` package, no security configuration class, and the POM does not include `spring-boot-starter-security`.",
+          "targetFile": "sample-java-code/pom.xml",
+          "lineStart": 25,
+          "lineEnd": 39,
+          "evidence": "Dependencies include validation, web, and test only; source search found no `SecurityFilterChain`, `@EnableWebSecurity`, or `@Configuration` class.",
+          "suggestedFix": "Add `spring-boot-starter-security` and a `config/SecurityConfig` defining public health access and explicit access rules for greeting endpoints, or document an approved public-only sample exception if security is intentionally out of scope.",
+          "sourceAgents": [
+            "architecture"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "architecture-4",
+          "severity": "Medium",
+          "category": "Spring Boot Configuration",
+          "title": "Profile-separated configuration is missing",
+          "description": "Only a single `application.yml` exists. The architecture checklist expects common, development, and production profile separation so environment-specific settings do not collapse into one file as the service grows.",
+          "targetFile": "sample-java-code/src/main/resources/application.yml",
+          "lineStart": 1,
+          "lineEnd": 6,
+          "evidence": "`application.yml` contains only server port and application name; no `application-dev.yml` or `application-prod.yml` was present in the target file list or `rg --files` output.",
+          "suggestedFix": "Keep common settings in `application.yml` and add `application-dev.yml` / `application-prod.yml` for environment-specific server, logging, security, datasource, and JPA settings when those concerns are introduced.",
+          "sourceAgents": [
+            "architecture"
+          ],
+          "confidence": "medium"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "architecture"
+          ],
+          "description": "Confirm whether `sample-java-code` is intentionally exempt from the full package/security structure because `sample-java-code/AGENTS.md` describes it as a small validation project. If exempt, document the exception explicitly so architecture reviewers do not treat it as erosion.",
+          "recommendedDecisionMaker": "Repository maintainer or architecture owner"
+        }
+      ],
+      "designDeviations": [],
+      "score": 44,
+      "usage": {
+        "inputTokens": 121229,
+        "cachedInputTokens": 78336,
+        "outputTokens": 5351,
+        "reasoningOutputTokens": 2119
+      },
+      "rawMarkdown": "# Source Code Review Report: Architecture Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ❌ Fail\n- **Issue Count**: Critical: 1 / High: 2 / Medium: 1 / Low: 0\n\n## Layer Dependency Direction Check\n| Package | Dependency Violation | Details |\n|---------|---------------------|---------|\n| `api` → `service` | None | `GreetingController` depends on `GreetingService`, which is the correct downward direction. |\n| `service` → `api` | Yes | `GreetingService` imports `com.codexskishop.sample.api.GreetingResponse`, coupling service code to API/presentation types. |\n\n## Project Structure Check\n| Package | Structure Compliance | Missing/Misplaced Packages |\n|---------|---------------------|---------------------------|\n| `com.codexskishop.sample` | Partial | Only `api` and `service` exist. Controller, DTOs, and exception advice are collapsed into `api`; `controller`, `dto/request`, `dto/response`, `exception`, `config`, `repository`, and `model` are not present. |\n\n## Issues\n| # | Severity | Category | Target File | Line | Issue Description | Fix Example |\n|---|---------|---------|------------|------|-------------------|-------------|\n| 1 | Critical | Layer Dependency Direction | `sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java` | 3 | Service imports `api.GreetingResponse`, creating a reverse dependency on API/presentation code. | Move DTOs to `dto/response`, or return a service/domain value and map to DTO in the controller. |\n| 2 | High | Project Structure | `sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java` | 1 | Controller, DTOs, and exception advice are all in `api`, violating explicit package boundaries. | Split into `controller`, `dto/request`, `dto/response`, and `exception`. |\n| 3 | High | Spring Boot Configuration | `sample-java-code/pom.xml` | 25 | No security starter or `SecurityConfig`/`SecurityFilterChain` is present. | Add `spring-boot-starter-security` and `config/SecurityConfig`, or document an approved public-only sample exception. |\n| 4 | Medium | Spring Boot Configuration | `sample-java-code/src/main/resources/application.yml` | 1 | Configuration is not separated by profile. | Add `application-dev.yml` and `application-prod.yml` for environment-specific settings. |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|----------------|-------------|-------|\n| Layer Dependency Direction | 2/5 | Controller-to-service is correct, but service-to-api reverse dependency is critical. |\n| Project Structure | 1/5 | Most required architecture packages are absent or collapsed into `api`. |\n| Module Boundary Enforcement | 2/5 | DTO boundary is weak because presentation DTOs live in and are consumed from `api`. |\n| Spring Boot Configuration | 2/5 | Application root exists, but security config and profile separation are missing. |\n| Separation of Concerns | 4/5 | Controller delegates business behavior and exception handling is centralized, though package placement is wrong. |\n| **Total Score** | **11/25** | |\n\n## Escalation Items (Requires Human Judgment)\n- Confirm whether this small sample project is exempt from the full package/security architecture. If it is, document that exception explicitly.",
+      "startedAt": "2026-06-04T13:01:30.261Z",
+      "completedAt": "2026-06-04T13:03:06.621Z",
+      "durationMs": 96360
+    },
+    {
+      "agentId": "ddd-domain",
+      "threadId": "019e92b9-7dc8-7f32-ab78-434de3d287a5",
+      "status": "error",
+      "verdict": "incomplete",
+      "summary": "Codex review failed.",
+      "findings": [],
+      "escalations": [],
+      "designDeviations": [],
+      "rawMarkdown": "{\"verdict\":\"warning\",\"summary\":\"DDD domain review found no concrete aggregate, value object, repository, or domain event implementation in sample-java-code. No DDD violations were proven, but the target is too small and non-domain-oriented to fully evaluate SkiShop aggregate design.\",\"findings\":[],\"escalations\":[],\"designDeviations\":[],\"score\":null,\"rawMarkdown\":\"# Source Code Review Report: DDD Domain Review\\n\\n## Summary\\n- **Review Target**: sample-java-code\\n- **Verdict**: ⚠️ Warning\\n- **Finding Count**: Critical: 0 / High: 0 / Medium: 0 / Low: 0\\n\\n## Aggregate Root Boundary Check\\n| Service | Aggregate Root | Boundary Compliance | Violation Details |\\n|---------|---------------|--------------------|--------------------|\\n| `GreetingService` | N/A | N/A | No entity, aggregate root, child entity, repository, or transaction boundary exists in the target. |\\n\\n## Value Object Check\\n| Target | Immutability | Record Usage | Validation | @Embeddable |\\n|--------|-------------|-------------|------------|-------------|\\n| `GreetingRequest` | Pass | Pass | Bean Validation annotations on DTO fields | N/A, API DTO not a persisted Value Object |\\n| `GreetingResponse` | Pass | Pass | N/A | N/A, API DTO not a persisted Value Object |\\n| `HealthResponse` | Pass | Pass | N/A | N/A, API DTO not a persisted Value Object |\\n| `ErrorResponse` | Pass | Pass | N/A | N/A, API DTO not a persisted Value Object |\\n\\n## Findings\\n| # | Severity | Category | Target File | Line | Finding | Fix Example |\\n|---|----------|----------|-------------|------|---------|-------------|\\n| - | - | - | - | - | No DDD-domain findings with sufficient evidence. | - |\\n\\n## Scorecard\\n| Evaluation Area | Score (1-5) | Notes |\\n|----------------|-------------|-------|\\n| Aggregate Root Boundary | N/A | No aggregates or child entities in scope. |\\n| Value Object Implementation | N/A | DTO records are immutable, but no domain Value Objects are present. |\\n| Domain Event Design | N/A | No inter-aggregate workflow or domain events in scope. |\\n| Repository Pattern | N/A | No repositories in scope. |\\n| Domain Logic Encapsulation | N/A | Only trivial greeting normalization exists in `GreetingService`; no SkiShop domain rules are present. |\\n| Ubiquitous Language | 3/5 | Naming is consistent for the sample greeting API, but it does not exercise SkiShop bounded-context terminology. |\\n| **Total Score** | **N/A** | DDD scoring is not meaningful for this minimal sample API. |\\n\\n## Escalation Items (Requires Human Judgment)\\nNone.\\n\\n## Review Notes\\nThe target contains a minimal Spring Boot API: `GreetingController`, `GreetingService`, API DTO records, and exception handling. A focused scan found no `@Entity`, `@Embeddable`, Spring Data repository, domain event, `ApplicationEventPublisher`, or transactional aggregate workflow. Because there is no implemented SkiShop domain model in this target, aggregate-boundary and domain-event compliance cannot be materially assessed.\"}",
+      "errorMessage": "[\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"number\",\n    \"received\": \"null\",\n    \"path\": [\n      \"score\"\n    ],\n    \"message\": \"Expected number, received null\"\n  }\n]",
+      "startedAt": "2026-06-04T13:01:30.261Z",
+      "completedAt": "2026-06-04T13:02:29.553Z",
+      "durationMs": 59292
+    },
+    {
+      "agentId": "api-endpoint",
+      "threadId": "019e92b9-7dac-7233-a88f-42be2270e54b",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Reviewed only sample-java-code from the API endpoint perspective. No legacy .do mappings or missing Bean Validation were found, but endpoint/package conventions and error-response design do not meet the stated review standard.",
+      "findings": [
+        {
+          "id": "api-endpoint-1",
+          "severity": "High",
+          "category": "Spring MVC Controller Implementation Pattern",
+          "title": "REST controller is outside the required controller package convention",
+          "description": "GreetingController is a Spring MVC endpoint class but is placed in com.codexskishop.sample.api rather than a controller package. The review standard requires controller classes to live under the controller/ package so endpoint ownership and component conventions stay consistent.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+          "lineStart": 1,
+          "lineEnd": 20,
+          "evidence": "package com.codexskishop.sample.api; ... @RestController ... @RequestMapping(\"/api\")",
+          "suggestedFix": "Move the endpoint class to a controller package such as com.codexskishop.sample.controller, or document and standardize api as the approved REST-controller package if this sample module intentionally diverges.",
+          "sourceAgents": [
+            "api-endpoint"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "api-endpoint-2",
+          "severity": "High",
+          "category": "Error Response Design",
+          "title": "Validation errors use a custom DTO instead of RFC 9457 ProblemDetail",
+          "description": "GlobalExceptionHandler returns ResponseEntity<ErrorResponse> and does not extend ResponseEntityExceptionHandler or produce Spring ProblemDetail responses. This does not satisfy the stated Spring Boot 3.2+ error-response convention for RFC 9457-compatible responses.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+          "lineStart": 15,
+          "lineEnd": 55,
+          "evidence": "@RestControllerAdvice public class GlobalExceptionHandler { ... public ResponseEntity<ErrorResponse> ... .body(new ErrorResponse(\"Request validation failed.\", Instant.now()))",
+          "suggestedFix": "Extend ResponseEntityExceptionHandler and return ProblemDetail, for example ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, \"Request validation failed.\"); include stable fields such as title/status/detail without exposing internals.",
+          "sourceAgents": [
+            "api-endpoint"
+          ],
+          "confidence": "high"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "api-endpoint"
+          ],
+          "description": "The root AGENTS.md references an AGENTS.md §5.1 URL migration table, but that table was not present in the supplied root instructions and no design reference files were provided. Exact SkiShop URL mapping compliance for /api/health and /api/greetings could not be verified beyond confirming there are no .do mappings.",
+          "recommendedDecisionMaker": "Project owner or API design owner"
+        }
+      ],
+      "designDeviations": [
+        {
+          "document": "AGENTS.md / agent API endpoint review standard",
+          "description": "Endpoint package naming deviates from the stated controller/ package convention.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java"
+        },
+        {
+          "document": "Agent API endpoint review standard: Error Response Design",
+          "description": "Error handling uses a custom ErrorResponse record rather than Spring ProblemDetail / ResponseEntityExceptionHandler.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java"
+        }
+      ],
+      "score": 19,
+      "usage": {
+        "inputTokens": 95824,
+        "cachedInputTokens": 57856,
+        "outputTokens": 4308,
+        "reasoningOutputTokens": 1759
+      },
+      "rawMarkdown": "# Source Code Review Report: API Endpoint Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ❌ Fail\n- **Issue Count**: Critical: 0 / High: 2 / Medium: 0 / Low: 0\n\n## Endpoint List and Compliance\n| Endpoint | HTTP Method | Separation | Validation | Authorization | @AuthenticationPrincipal |\n|----------|------------|-----------|-----------|--------------|-------------------------|\n| /api/health | GET | ⚠️ @RestController in api package | N/A, no input | N/A | N/A |\n| /api/greetings | GET | ⚠️ @RestController in api package | ✅ @RequestParam with @NotBlank/@Size and @Validated | N/A | N/A |\n| /api/greetings | POST | ⚠️ @RestController in api package | ✅ @Valid @RequestBody with DTO constraints | N/A | N/A |\n\n## Issues\n| # | Severity | Category | Target File | Line | Issue Description | Fix Example |\n|---|---------|---------|------------|------|-------------------|-------------|\n| 1 | High | Spring MVC Controller Implementation Pattern | sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java | 1 | Endpoint controller is under com.codexskishop.sample.api, not a controller package as required by the review standard. | Move to com.codexskishop.sample.controller or formally document api as the approved REST endpoint package. |\n| 2 | High | Error Response Design | sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java | 15 | Validation errors return custom ErrorResponse via ResponseEntity instead of RFC 9457 ProblemDetail through ResponseEntityExceptionHandler. | Extend ResponseEntityExceptionHandler and return ProblemDetail with sanitized title/status/detail. |\n\n## Positive Checks\n- No legacy .do URL suffix was found in target mappings.\n- Request DTO field validation exists on GreetingRequest.name.\n- @Valid is present on the JSON request body.\n- Query parameter validation is enabled with @Validated and direct parameter constraints.\n- No user-specific resource endpoints were present, so @AuthenticationPrincipal/IDOR checks were not applicable.\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|----------------|-------------|-------|\n| Spring MVC Controller Pattern | 3/5 | REST controller usage is acceptable for API endpoints, but package convention is not met. |\n| REST Convention Compliance | 4/5 | GET/POST usage is reasonable and no .do suffix exists; exact migration-table compliance could not be verified from provided references. |\n| Input Validation | 5/5 | External inputs on implemented endpoints pass through Bean Validation. |\n| Error Response | 2/5 | Custom ErrorResponse does not meet the required ProblemDetail/ResponseEntityExceptionHandler convention. |\n| Parameter Binding | 5/5 | @RequestParam and @RequestBody binding are appropriate; no path variables or user-owned resources exist. |\n| **Total Score** | **19/25** | |\n\n## Escalation Items (Requires Human Judgment)\n- Confirm whether sample-java-code is intentionally allowed to expose /api/health and /api/greetings outside the SkiShop migration URL table. The supplied AGENTS.md did not include the referenced §5.1 mapping table, and no design reference files were provided.\n",
+      "startedAt": "2026-06-04T13:01:30.261Z",
+      "completedAt": "2026-06-04T13:02:55.684Z",
+      "durationMs": 85423
+    },
+    {
+      "agentId": "java-standards",
+      "threadId": "019e92b9-7db9-7763-8725-4663c5eaf8f7",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Java 21/Spring Boot coding standards review failed due to prohibited DI patterns in test sources and missing service-interface segregation. Production DTOs correctly use records, naming is generally compliant, and no TODO/FIXME/UnsupportedOperationException placeholders were found.",
+      "findings": [
+        {
+          "id": "java-standards-1",
+          "severity": "Critical",
+          "category": "Prohibited Pattern",
+          "title": "Field injection with @Autowired remains in Java test source",
+          "description": "The standards prohibit @Autowired field injection in all Java files. This test injects MockMvc through a mutable field instead of constructor injection.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 21,
+          "lineEnd": 22,
+          "evidence": "@Autowired\nprivate MockMvc mockMvc;",
+          "suggestedFix": "Use constructor injection with a final field, for example `private final MockMvc mockMvc;` and an `@Autowired GreetingControllerTest(MockMvc mockMvc)` constructor, or Spring/JUnit constructor injection configured for the test.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-2",
+          "severity": "Critical",
+          "category": "Prohibited Pattern",
+          "title": "DI-managed service is directly instantiated in Java test source",
+          "description": "The standards prohibit direct `new XxxService()` instantiation of DI-managed beans in all Java files. `GreetingService` is annotated with `@Service`, but the test constructs it directly.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+          "lineStart": 10,
+          "lineEnd": 10,
+          "evidence": "private final GreetingService greetingService = new GreetingService();",
+          "suggestedFix": "Inject the service through Spring test constructor injection, or extract pure domain logic into a non-Spring class and test that class directly while keeping the Spring-managed service wired through DI.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "java-standards-3",
+          "severity": "High",
+          "category": "DI Pattern Quality",
+          "title": "Service has no corresponding interface and controller depends on concrete implementation",
+          "description": "The DI checklist requires Service/Repository classes to have corresponding interfaces. `GreetingService` is a concrete `@Service`, and `GreetingController` injects that concrete type directly.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+          "lineStart": 9,
+          "lineEnd": 10,
+          "evidence": "@Service\npublic class GreetingService {",
+          "suggestedFix": "Introduce a no-prefix interface such as `GreetingService` or `GreetingUseCase`, move the implementation to a descriptively named class such as `DefaultGreetingService`, and inject the interface in `GreetingController`.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-4",
+          "severity": "High",
+          "category": "Null Safety",
+          "title": "Public service method has ambiguous null contract",
+          "description": "`greet(String name)` accepts a parameter that is later treated as nullable by `normalizeName`, but the public API lacks `@Nullable`/`@NonNull` annotation or an explicit null contract in the type system.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+          "lineStart": 19,
+          "lineEnd": 29,
+          "evidence": "public GreetingResponse greet(String name) {\n...\nif (name == null) {\n  return \"\";\n}",
+          "suggestedFix": "Declare the intended contract explicitly. Prefer `greet(@NonNull String name)` with `Objects.requireNonNull` if callers must not pass null, or `greet(@Nullable String name)` if null is intentionally normalized to a validation failure.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-5",
+          "severity": "Medium",
+          "category": "Platform Consistency",
+          "title": "Spring Boot version does not match the agent's Spring Boot 3.2.x target",
+          "description": "The review agent definition targets Java 21 with Spring Boot 3.2.x, but the sample module uses Spring Boot 3.5.8. This may be intentional for the sample, but it is a standards drift from the stated target platform.",
+          "targetFile": "sample-java-code/pom.xml",
+          "lineStart": 10,
+          "lineEnd": 10,
+          "evidence": "<version>3.5.8</version>",
+          "suggestedFix": "Align the parent version with the project-approved Spring Boot 3.2.x baseline, or document that this sample module is intentionally allowed to use 3.5.x.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "java-standards-6",
+          "severity": "Medium",
+          "category": "Time Handling",
+          "title": "Direct Instant.now() call is not Clock-injected",
+          "description": "The Java instructions prefer `Instant`/`LocalDateTime` with `Clock` for time handling. Direct `Instant.now()` makes error timestamp behavior harder to test deterministically and less consistent with injected time sources.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+          "lineStart": 54,
+          "lineEnd": 54,
+          "evidence": ".body(new ErrorResponse(\"Request validation failed.\", Instant.now()));",
+          "suggestedFix": "Inject `Clock` into `GlobalExceptionHandler` and call `Instant.now(clock)`. Provide a production `Clock.systemUTC()` bean and fixed clocks in tests.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "java-standards-7",
+          "severity": "Low",
+          "category": "Java 21 Feature Adoption",
+          "title": "Obvious local variable can use var",
+          "description": "The local variable type is obvious from the initializer. The standards encourage `var` where the type is clear from context.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+          "lineStart": 20,
+          "lineEnd": 20,
+          "evidence": "String normalizedName = normalizeName(name);",
+          "suggestedFix": "Use `var normalizedName = normalizeName(name);` if the project applies the `var` rule strictly.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        }
+      ],
+      "escalations": [],
+      "designDeviations": [
+        {
+          "document": "orchest-code-review-java-standards agent definition",
+          "description": "The target module uses Spring Boot 3.5.8 while the review context specifies Spring Boot 3.2.x.",
+          "targetFile": "sample-java-code/pom.xml"
+        }
+      ],
+      "score": 15,
+      "usage": {
+        "inputTokens": 121703,
+        "cachedInputTokens": 90624,
+        "outputTokens": 7288,
+        "reasoningOutputTokens": 3396
+      },
+      "rawMarkdown": "# Source Code Review Report: Java 21 Coding Standards Review\n\n## Summary\n- **Review Target**: `sample-java-code`\n- **Verdict**: ❌ Fail\n- **Issue Count**: Critical: 2 / High: 2 / Medium: 2 / Low: 1\n\n## Prohibited Pattern Detection Results\n| # | Pattern | Count | Target File | Line # |\n|---|---------|-------|-------------|--------|\n| 1 | `@Autowired` field injection | 1 | `sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java` | 21 |\n| 2 | Direct `new XxxService()` for DI-managed bean | 1 | `sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java` | 10 |\n\n## Incomplete / Shortcut Implementation Detection Results\n| # | Type | Detection | Target File | Line # | Details |\n|---|------|-----------|-------------|--------|---------|\n| - | None | No TODO/FIXME/HACK/XXX, placeholder exception, UnsupportedOperationException, or production Mock/Stub/Fake/Dummy contamination found | - | - | Test-source `MockMvc` usage is excluded as legitimate test framework usage. |\n\n## Naming Convention Check Results\n| File | Violation Location | Current Name | Recommended Name |\n|------|-------------------|-------------|-----------------|\n| - | - | - | No PascalCase/camelCase/UPPER_SNAKE_CASE/package lowercase violations found in reviewed target files. |\n\n## Issues\n| # | Severity | Category | Target File | Line # | Issue Description | Fix Example |\n|---|----------|----------|-------------|--------|-------------------|-------------|\n| 1 | Critical | Prohibited Pattern | `sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java` | 21 | `@Autowired` field injection is prohibited in all Java files. | Use constructor injection with a final `MockMvc` field. |\n| 2 | Critical | Prohibited Pattern | `sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java` | 10 | `GreetingService` is Spring-managed via `@Service`, but the test directly constructs it with `new GreetingService()`. | Inject through Spring test constructor injection, or extract non-Spring pure logic for direct unit testing. |\n| 3 | High | DI Pattern Quality | `sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java` | 9 | Service has no corresponding interface, and controller depends on the concrete service type. | Add a no-prefix service interface and inject that interface. |\n| 4 | High | Null Safety | `sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java` | 19 | Public service method parameter has ambiguous nullable/non-null contract. | Add `@NonNull`/`@Nullable` and enforce the selected contract consistently. |\n| 5 | Medium | Platform Consistency | `sample-java-code/pom.xml` | 10 | Spring Boot parent is 3.5.8 while the review context targets Spring Boot 3.2.x. | Align to approved 3.2.x baseline or document the exception. |\n| 6 | Medium | Time Handling | `sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java` | 54 | Direct `Instant.now()` is not backed by injected `Clock`. | Inject `Clock` and call `Instant.now(clock)`. |\n| 7 | Low | Java 21 Feature Adoption | `sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java` | 20 | Obvious local variable type can use `var`. | `var normalizedName = normalizeName(name);` |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|----------------|-------------|-------|\n| Naming Conventions | 5/5 | Class, method, variable, package, and record names are compliant. |\n| Java 21 Feature Adoption | 4/5 | DTOs use records and tests use text blocks; minor `var` opportunity remains. |\n| Prohibited Pattern Compliance | 1/5 | Two prohibited DI patterns remain in Java test files. |\n| DI Pattern Quality | 2/5 | Constructor injection exists in production controller, but service interface segregation is missing and tests violate DI rules. |\n| Null Safety | 3/5 | No collection null returns or Optional misuse found; service null contract is ambiguous. |\n| **Total Score** | **15/25** | Fail due to Critical findings. |\n\n## Escalation Items (Requires Human Judgment)\n- Confirm whether `sample-java-code` is intentionally exempt from the Spring Boot 3.2.x baseline. If yes, document the exemption near the module or parent POM.",
+      "startedAt": "2026-06-04T13:01:30.261Z",
+      "completedAt": "2026-06-04T13:03:48.890Z",
+      "durationMs": 138629
+    },
+    {
+      "agentId": "async-concurrency",
+      "threadId": "019e92b9-7da7-7133-a71c-0c78ec0003fb",
+      "status": "completed",
+      "verdict": "warning",
+      "summary": "Async/concurrency review completed for sample-java-code. No blocking waits, async misuse, scheduled-task risks, custom executors, ThreadLocal usage, or shared mutable state were found. One High finding: Java 21/Spring Boot app does not enable virtual threads.",
+      "findings": [
+        {
+          "id": "async-concurrency-1",
+          "severity": "High",
+          "category": "Virtual Thread Adoption",
+          "title": "Virtual threads are not enabled for the Java 21 Spring Boot application",
+          "description": "The application is configured for Java 21, but application.yml does not set `spring.threads.virtual.enabled=true`. Under the review checklist, Java 21 Spring Boot services should opt into virtual threads unless there is a documented reason not to, so request handling remains platform-thread based.",
+          "targetFile": "sample-java-code/src/main/resources/application.yml",
+          "lineStart": 4,
+          "lineEnd": 6,
+          "evidence": "`spring:` only contains `application.name`; there is no `spring.threads.virtual.enabled` setting.",
+          "suggestedFix": "Add `spring.threads.virtual.enabled: true` under the Spring configuration, for example:\n\nspring:\n  threads:\n    virtual:\n      enabled: true\n  application:\n    name: sample-java-code",
+          "sourceAgents": [
+            "async-concurrency"
+          ],
+          "confidence": "high"
+        }
+      ],
+      "escalations": [],
+      "designDeviations": [],
+      "score": 22,
+      "usage": {
+        "inputTokens": 124254,
+        "cachedInputTokens": 94208,
+        "outputTokens": 2950,
+        "reasoningOutputTokens": 679
+      },
+      "rawMarkdown": "# Source Code Review Report: Async Processing & Concurrency Control Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ⚠️ Warning\n- **Issue Count**: Critical: 0 / High: 1 / Medium: 0 / Low: 0\n\n## Virtual Thread Compatibility Matrix\n| Class / Method | synchronized over I/O | ThreadLocal risk | ReentrantLock used | Verdict |\n|---------------|----------------------|-----------------|-------------------|---------|\n| `SampleJavaCodeApplication.main` | No | No | N/A | ⚠️ App-level virtual threads not enabled |\n| `GreetingController.health` | No | No | N/A | ✅ Pass |\n| `GreetingController.greetByQuery` | No | No | N/A | ✅ Pass |\n| `GreetingController.greetByBody` | No | No | N/A | ✅ Pass |\n| `GreetingService.greet` | No | No | N/A | ✅ Pass |\n| `GlobalExceptionHandler.*` | No | No | N/A | ✅ Pass |\n\n## Blocking Call Detection Results\n| # | Pattern | File | Line # | Context |\n|---|---------|------|--------|---------|\n| - | None found | - | - | No `CompletableFuture.get()`, `.join()`, `Future.get()`, `Thread.sleep()`, latch await, or executor blocking patterns found in target production code. |\n\n## @Scheduled / Background Task Quality Check\n| Task Name | Exception Handling | Graceful Shutdown | Thread Pool Config | Backoff | Verdict |\n|-----------|-------------------|-------------------|-------------------|---------|---------|\n| - | N/A | N/A | N/A | N/A | No `@Scheduled`, custom `ExecutorService`, or background task code found. |\n\n## Issues\n| # | Severity | Category | Target File | Line # | Issue Description | Fix Example |\n|---|----------|----------|-------------|--------|-------------------|-------------|\n| 1 | High | Virtual Thread Adoption | `sample-java-code/src/main/resources/application.yml` | 4 | Java 21 is configured in `pom.xml`, but Spring Boot virtual threads are not enabled. `application.yml` only defines `spring.application.name`, leaving request handling on platform threads. | Add `spring.threads.virtual.enabled=true` under `spring`. |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|----------------|-------------|-------|\n| Virtual Thread Adoption | 3/5 | Java 21 is used, but `spring.threads.virtual.enabled=true` is missing. |\n| Blocking Call Absence | 5/5 | No blocking waits or sleeps found. |\n| CompletableFuture / @Async Correctness | 5/5 | No `CompletableFuture` or `@Async` usage found, so no misuse detected. |\n| @Scheduled / Background Task Quality | 5/5 | No scheduled/background task code in target. |\n| Thread Safety | 4/5 | No shared mutable state or ThreadLocal usage found; current service/controller code is effectively stateless. |\n| **Total Score** | **22/25** | |\n\n## Escalation Items (Requires Human Judgment)\nNone.\n\nStatic source review only; no files were modified.",
+      "startedAt": "2026-06-04T13:01:30.261Z",
+      "completedAt": "2026-06-04T13:02:25.741Z",
+      "durationMs": 55480
+    },
+    {
+      "agentId": "error-logging",
+      "threadId": "019e92b9-7daa-7c92-a7d5-99fe5dc637d7",
+      "status": "error",
+      "verdict": "incomplete",
+      "summary": "Codex review failed.",
+      "findings": [],
+      "escalations": [],
+      "designDeviations": [],
+      "rawMarkdown": "{\"verdict\":\"fail\",\"summary\":\"Exception/logging review of sample-java-code found no PII logging, no System.out logging, and no string-concatenated log statements, but the module lacks RFC 7807 ProblemDetail handling, non-validation exception mapping, correlation ID/MDC propagation, production JSON log configuration, and Actuator/Micrometer observability.\",\"findings\":[{\"severity\":\"High\",\"category\":\"Exception Handling\",\"title\":\"Global exception handling is validation-only and not RFC 7807 ProblemDetail-based\",\"description\":\"GlobalExceptionHandler only handles validation-related exceptions and returns a custom ErrorResponse DTO. It does not define a catch-all handler for unexpected exceptions, does not map a custom exception hierarchy to HTTP statuses, and does not return Spring ProblemDetail as required by the review standard. This leaves non-validation failures to Spring's default error handling and weakens consistency and observability during incidents.\",\"targetFile\":\"sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java\",\"lineStart\":24,\"lineEnd\":54,\"evidence\":\"@ExceptionHandler methods exist only for MethodArgumentNotValidException, HandlerMethodValidationException, and ConstraintViolationException; badRequest() returns ResponseEntity<ErrorResponse> rather than ProblemDetail.\",\"suggestedFix\":\"Return ProblemDetail from @ExceptionHandler methods, add mappings for domain exceptions such as ResourceNotFoundException, BusinessException, ValidationException, and add a sanitized @ExceptionHandler(Exception.class) that logs the stack trace server-side and returns a generic 500 ProblemDetail.\",\"confidence\":\"high\"},{\"severity\":\"High\",\"category\":\"Exception Hierarchy\",\"title\":\"Service throws generic IllegalArgumentException without explicit HTTP mapping\",\"description\":\"GreetingService throws IllegalArgumentException for a validation/business failure, but GlobalExceptionHandler does not map IllegalArgumentException or a custom ValidationException. If this path is reached outside controller Bean Validation, the API can return an inconsistent default 500 instead of a controlled 400/422 response.\",\"targetFile\":\"sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java\",\"lineStart\":21,\"lineEnd\":22,\"evidence\":\"if (normalizedName.isBlank()) { throw new IllegalArgumentException(\\\"name must not be blank\\\"); }\",\"suggestedFix\":\"Introduce a domain-specific ValidationException or BusinessException and map it in GlobalExceptionHandler to 400 or 422 with ProblemDetail; alternatively map IllegalArgumentException explicitly if this remains a small sample.\",\"confidence\":\"high\"},{\"severity\":\"High\",\"category\":\"Correlation ID / MDC\",\"title\":\"No correlation ID filter or MDC propagation is implemented\",\"description\":\"The reviewed target has no Filter or HandlerInterceptor that reads or generates X-Correlation-Id, stores it in MDC, writes it to the response header, and clears MDC in finally. Without this, logs cannot be reliably tied to a request during incident analysis.\",\"targetFile\":\"sample-java-code/src/main/java\",\"lineStart\":null,\"lineEnd\":null,\"evidence\":\"Searches for MDC, OncePerRequestFilter, HandlerInterceptor, X-Correlation-Id, and Correlation returned no implementation in sample-java-code/src/main.\",\"suggestedFix\":\"Add a OncePerRequestFilter that reads X-Correlation-Id, generates a UUID when absent, calls MDC.put(\\\"correlationId\\\", correlationId), sets the response header, invokes the chain, and calls MDC.clear() in finally.\",\"confidence\":\"high\"},{\"severity\":\"High\",\"category\":\"Structured Logging\",\"title\":\"Production JSON log configuration and logstash encoder are missing\",\"description\":\"The module has no logback-spring.xml and no logstash-logback-encoder dependency. Even though the source currently has no malformed log statements, production logs will not be emitted in a structured JSON format with MDC fields such as correlationId.\",\"targetFile\":\"sample-java-code/pom.xml\",\"lineStart\":25,\"lineEnd\":39,\"evidence\":\"Dependencies include spring-boot-starter-validation, spring-boot-starter-web, and spring-boot-starter-test only; no logstash-logback-encoder. No logback-spring.xml file is present under src/main/resources.\",\"suggestedFix\":\"Add net.logstash.logback:logstash-logback-encoder and a logback-spring.xml production profile using JSON output that includes application name, level, logger, message, exception, and MDC correlationId.\",\"confidence\":\"high\"},{\"severity\":\"High\",\"category\":\"Observability Integration\",\"title\":\"Spring Boot Actuator and Micrometer endpoints are not configured\",\"description\":\"The application does not include spring-boot-starter-actuator or management endpoint configuration. This prevents standard health and metrics endpoints from being available for operational monitoring; the custom /api/health endpoint is not a substitute for Actuator health/metrics integration.\",\"targetFile\":\"sample-java-code/pom.xml\",\"lineStart\":25,\"lineEnd\":39,\"evidence\":\"pom.xml dependencies do not include spring-boot-starter-actuator; application.yml only sets server.port and spring.application.name.\",\"suggestedFix\":\"Add spring-boot-starter-actuator and configure management.endpoints.web.exposure.include for at least health, info, metrics, and prometheus if used by the deployment environment.\",\"confidence\":\"high\"},{\"severity\":\"Medium\",\"category\":\"Stack Trace Disclosure\",\"title\":\"Stack trace disclosure policy is not explicit in configuration\",\"description\":\"application.yml does not explicitly set server.error.include-stacktrace=never. Spring Boot defaults are generally safe, so this is not direct evidence of disclosure, but an explicit setting reduces configuration drift risk across environments.\",\"targetFile\":\"sample-java-code/src/main/resources/application.yml\",\"lineStart\":1,\"lineEnd\":6,\"evidence\":\"application.yml contains server.port and spring.application.name only; no server.error.include-stacktrace setting.\",\"suggestedFix\":\"Add server.error.include-stacktrace: never, and consider server.error.include-message: never or on_param depending on API error design.\",\"confidence\":\"medium\"}],\"escalations\":[],\"designDeviations\":[],\"score\":44,\"rawMarkdown\":\"# Source Code Review Report: Exception Handling & Logging Review\\n\\n## Summary\\n- **Review Target**: sample-java-code\\n- **Verdict**: ❌ Fail\\n- **Finding Count**: Critical: 0 / High: 5 / Medium: 1 / Low: 0\\n\\n## Exception Handling Check Results\\n| File | Swallowing | throw e; | Logging in catch | Verdict |\\n|------|-----------|----------|------------------|---------|\\n| sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java | None found | None found | No catch blocks; no catch-all exception logging | ❌ Fail |\\n| sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java | None found | None found | N/A | ⚠️ Generic exception not explicitly mapped |\\n\\n## PII Logging Detection Results\\n| # | File | Line Number | Detected PII Item | Suggested Fix |\\n|---|------|-------------|-------------------|---------------|\\n| - | - | - | None detected in target source | - |\\n\\n## Structured Logging Quality Check\\n| File | Placeholder Format | String Concatenation | System.out.println | Verdict |\\n|------|--------------------|---------------------|--------------------|---------|\\n| sample-java-code/src/main/java | No log statements found | None found | None found | ⚠️ No bad log calls, but production structured logging config is missing |\\n| sample-java-code/pom.xml | N/A | N/A | N/A | ❌ Missing logstash-logback-encoder |\\n| sample-java-code/src/main/resources | N/A | N/A | N/A | ❌ Missing logback-spring.xml |\\n\\n## Correlation ID (MDC) Implementation Status\\n| Module | Filter/Interceptor | Response Header | MDC Logging | MDC Cleanup |\\n|--------|-------------------|-----------------|-------------|-------------|\\n| sample-java-code | ❌ Missing | ❌ Missing | ❌ Missing | ❌ Missing |\\n\\n## Findings\\n| # | Severity | Category | Target File | Line Number | Finding | Suggested Fix Code |\\n|---|----------|----------|-------------|-------------|---------|-------------------|\\n| 1 | High | Exception Handling | sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java | 24-54 | Handler covers only validation exceptions and returns ErrorResponse instead of ProblemDetail. | Add ProblemDetail handlers for validation, domain exceptions, and Exception.class. |\\n| 2 | High | Exception Hierarchy | sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java | 21-22 | Generic IllegalArgumentException is not explicitly mapped to a client-safe status. | Use ValidationException/BusinessException and map it to 400/422. |\\n| 3 | High | Correlation ID / MDC | sample-java-code/src/main/java | N/A | No X-Correlation-Id filter/interceptor, MDC put, response header, or cleanup. | Add OncePerRequestFilter with MDC cleanup in finally. |\\n| 4 | High | Structured Logging | sample-java-code/pom.xml | 25-39 | No logstash-logback-encoder and no logback-spring.xml JSON config. | Add encoder dependency and JSON Logback config including correlationId. |\\n| 5 | High | Observability Integration | sample-java-code/pom.xml | 25-39 | No Spring Boot Actuator dependency or management endpoint configuration. | Add spring-boot-starter-actuator and expose health/info/metrics as appropriate. |\\n| 6 | Medium | Stack Trace Disclosure | sample-java-code/src/main/resources/application.yml | 1-6 | server.error.include-stacktrace=never is not explicit. | Add explicit server.error.include-stacktrace: never. |\\n\\n## Scorecard\\n| Evaluation Item | Score (1-5) | Notes |\\n|-----------------|-------------|-------|\\n| Exception Handling | 2/5 | Validation handling exists, but no ProblemDetail, catch-all, or exception hierarchy mapping. |\\n| Structured Logging Quality | 2/5 | No malformed log calls found, but production JSON logging is absent. |\\n| PII Logging Compliance | 5/5 | No PII logging detected in the reviewed source. |\\n| Correlation ID (MDC) | 1/5 | No implementation found. |\\n| Observability Integration | 1/5 | No Actuator/Micrometer endpoint configuration found. |\\n| **Overall Score** | **11/25** | Fails observability readiness despite clean absence of PII and bad log statements. |\\n\\n## Escalation Items (Requires Human Judgment)\\nNone.\"}",
+      "errorMessage": "[\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"number\",\n    \"received\": \"null\",\n    \"path\": [\n      \"findings\",\n      2,\n      \"lineStart\"\n    ],\n    \"message\": \"Expected number, received null\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"number\",\n    \"received\": \"null\",\n    \"path\": [\n      \"findings\",\n      2,\n      \"lineEnd\"\n    ],\n    \"message\": \"Expected number, received null\"\n  }\n]",
+      "startedAt": "2026-06-04T13:01:30.261Z",
+      "completedAt": "2026-06-04T13:03:12.428Z",
+      "durationMs": 102167
+    },
+    {
+      "agentId": "data-access",
+      "threadId": "019e92ba-570f-7f90-91c5-38c2cb0a90b5",
+      "status": "error",
+      "verdict": "incomplete",
+      "summary": "Codex review failed.",
+      "findings": [],
+      "escalations": [],
+      "designDeviations": [],
+      "rawMarkdown": "{\"verdict\":\"pass\",\"summary\":\"No data access layer code exists in the reviewed target. `sample-java-code` has Spring Web/Validation only, no Spring Data JPA dependency, entities, repositories, datasource settings, JPQL/native queries, or Flyway migrations, so the data-access checklist is not applicable and no defects were found.\",\"findings\":[],\"escalations\":[],\"designDeviations\":[],\"score\":null,\"rawMarkdown\":\"# Source Code Review Report: Data Access Layer Review\\n\\n## Summary\\n- **Review Target**: sample-java-code\\n- **Verdict**: ✅ Pass\\n- **Finding Count**: Critical: 0 / High: 0 / Medium: 0 / Low: 0\\n- **Review Method**: Static source review only; no files modified.\\n\\n## Entity Design Check\\n| Entity | @Table | @Column Coverage | java.time Usage | Collection Init | @Version | Verdict |\\n|--------|--------|-----------------|-----------------|-----------------|----------|---------|\\n| N/A | N/A | N/A | N/A | N/A | N/A | No JPA entities present |\\n\\n## Query Quality Check\\n| File | Method | readOnly TX | N+1 Risk | DTO Projection | Pagination | Verdict |\\n|------|--------|------------|----------|----------------|------------|---------|\\n| N/A | N/A | N/A | N/A | N/A | N/A | No repositories or persistence queries present |\\n\\n## Transaction Management Check\\n| File | Method | @Transactional | Rollback Rule | Event Publishing | Verdict |\\n|------|--------|---------------|---------------|------------------|---------|\\n| N/A | N/A | N/A | N/A | N/A | No data-modifying persistence operations present |\\n\\n## Findings\\n| # | Severity | Category | Target File | Line | Finding | Fix Example |\\n|---|----------|----------|-------------|------|---------|-------------|\\n| - | - | - | - | - | No findings from the data access layer perspective. | - |\\n\\n## Scorecard\\n| Evaluation Area | Score (1-5) | Notes |\\n|----------------|-------------|-------|\\n| Entity Design | N/A | No JPA entity model exists in target. |\\n| Query Quality | N/A | No Spring Data repository, JPQL, native SQL, or query methods exist. |\\n| Transaction Management | N/A | No persistence transaction boundary is required by current code. |\\n| Optimistic Locking | N/A | No persistent entities with concurrency risk exist. |\\n| Flyway Migration | N/A | No datasource or schema is configured; migrations are not applicable. |\\n| **Total Score** | **N/A** | Data access layer absent, so score is intentionally not assigned. |\\n\\n## Escalation Items (Requires Human Judgment)\\nNone.\\n\"}",
+      "errorMessage": "[\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"number\",\n    \"received\": \"null\",\n    \"path\": [\n      \"score\"\n    ],\n    \"message\": \"Expected number, received null\"\n  }\n]",
+      "startedAt": "2026-06-04T13:02:25.741Z",
+      "completedAt": "2026-06-04T13:03:24.998Z",
+      "durationMs": 59257
+    },
+    {
+      "agentId": "config-di",
+      "threadId": "019e92ba-6524-7bc0-9999-57066f0fbc4e",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "DI/configuration/security-filter-chain review of sample-java-code found missing Spring Security configuration and missing production-safe server/profile settings. Production bean DI is mostly clean, and no hardcoded secrets were detected.",
+      "findings": [
+        {
+          "id": "config-di-1",
+          "severity": "Critical",
+          "category": "Spring Security Filter Chain",
+          "title": "No Spring Security dependency or SecurityFilterChain is configured",
+          "description": "The module declares validation, web, and test starters only, and the reviewed source contains no SecurityFilterChain bean. As a result, request authorization, authentication provider/filter setup, session policy, CSRF policy, and security headers are all absent for the API surface. This violates the required filter-chain review standard and leaves future non-public endpoints unprotected by default.",
+          "targetFile": "sample-java-code/pom.xml",
+          "lineStart": 25,
+          "lineEnd": 39,
+          "evidence": "pom.xml dependencies include spring-boot-starter-validation, spring-boot-starter-web, and spring-boot-starter-test only; repository search found no SecurityFilterChain definition in sample-java-code.",
+          "suggestedFix": "Add spring-boot-starter-security and a @Configuration class defining a SecurityFilterChain with explicit CSRF/session policy, authorizeHttpRequests default-deny behavior, authentication mechanism, and headers(...) configuration. Public endpoints such as /api/health should be explicitly permitAll if intended.",
+          "sourceAgents": [
+            "config-di"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "config-di-2",
+          "severity": "Critical",
+          "category": "Application Properties",
+          "title": "Stack trace disclosure is not explicitly disabled",
+          "description": "application.yml does not set server.error.include-stacktrace=never. Although Spring Boot defaults may currently be safe, the project standard requires the setting to be explicit in common and production configuration so profile changes or future overrides do not expose stack traces to clients.",
+          "targetFile": "sample-java-code/src/main/resources/application.yml",
+          "lineStart": 1,
+          "lineEnd": 6,
+          "evidence": "application.yml only configures server.port and spring.application.name; no server.error.include-stacktrace setting is present, and no application-prod.yml/properties file exists.",
+          "suggestedFix": "Add server.error.include-stacktrace: never to application.yml and application-prod.yml. Consider also setting server.error.include-message: never for production-facing APIs.",
+          "sourceAgents": [
+            "config-di"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "config-di-3",
+          "severity": "High",
+          "category": "Application Properties",
+          "title": "Profile-based configuration separation is missing",
+          "description": "Only a single application.yml exists. The review standard expects common, development, and production profile configuration to be separated so production logging, server hardening, and secret sourcing cannot accidentally inherit development defaults.",
+          "targetFile": "sample-java-code/src/main/resources/application.yml",
+          "lineStart": 1,
+          "lineEnd": 6,
+          "evidence": "find sample-java-code/src/main/resources -maxdepth 1 -type f -name 'application*' returned only sample-java-code/src/main/resources/application.yml.",
+          "suggestedFix": "Keep common settings in application.yml, add application-dev.yml for local developer defaults, and add application-prod.yml with explicit production-safe logging, error, server-header, and externalized secret settings if any secrets are introduced later.",
+          "sourceAgents": [
+            "config-di"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "config-di-4",
+          "severity": "High",
+          "category": "DI Registration Quality",
+          "title": "Test class uses field injection",
+          "description": "GreetingControllerTest injects MockMvc through an @Autowired field. The repository and review standard forbid field injection because it hides dependencies and makes object construction less explicit. This is test code, so the production runtime risk is lower than field injection in a Spring bean, but it still violates the stated DI rule.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 21,
+          "lineEnd": 22,
+          "evidence": "@Autowired private MockMvc mockMvc;",
+          "suggestedFix": "Use constructor injection for the test dependency, for example an @Autowired constructor assigning a final MockMvc field, or configure JUnit/Spring test constructor autowiring consistently.",
+          "sourceAgents": [
+            "config-di"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "config-di-5",
+          "severity": "Medium",
+          "category": "Security Settings",
+          "title": "Production logging policy and logback-spring.xml are absent",
+          "description": "No production profile logging level or logback-spring.xml exists. The review standard expects production root logging to be WARN or above and structured/profile-specific logging to reduce accidental sensitive data exposure and noisy logs.",
+          "targetFile": "sample-java-code/src/main/resources/application.yml",
+          "lineStart": 1,
+          "lineEnd": 6,
+          "evidence": "application.yml has no logging.level.* entries, no application-prod.yml exists, and no logback-spring.xml was found in sample-java-code/src/main/resources.",
+          "suggestedFix": "Add application-prod.yml with logging.level.root: WARN and a logback-spring.xml if structured/profile-specific logging is required for the sample's deployment target.",
+          "sourceAgents": [
+            "config-di"
+          ],
+          "confidence": "high"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "high",
+          "sourceAgents": [
+            "config-di"
+          ],
+          "description": "Confirm whether sample-java-code is intended to be a deliberately public, unauthenticated sample API. If yes, document that decision and still add Spring Security with explicit permitAll matchers and security headers; if no, define the authentication/authorization model before publishing.",
+          "recommendedDecisionMaker": "Project owner or security lead"
+        }
+      ],
+      "designDeviations": [
+        {
+          "document": "AGENTS.md / docs/agents/java/AGENTS.md / docs/orchest-code-review-config-di.agent.md",
+          "description": "The target lacks the Spring Security setup and production-safe profile configuration expected by the repository and DI/configuration review standards.",
+          "targetFile": "sample-java-code/pom.xml"
+        }
+      ],
+      "score": 13,
+      "usage": {
+        "inputTokens": 101227,
+        "cachedInputTokens": 83456,
+        "outputTokens": 6393,
+        "reasoningOutputTokens": 2962
+      },
+      "rawMarkdown": "# Source Code Review Report: DI / Configuration / Security Filter Chain Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ❌ Fail\n- **Issue Count**: Critical: 2 / High: 2 / Medium: 1 / Low: 0\n\n## Spring Security Filter Chain Check\n| # | Expected Configuration | Actual Configuration | Verdict |\n|---|----------------------|---------------------|---------|\n| 1 | @ControllerAdvice global exception handler | `@RestControllerAdvice` exists in `GlobalExceptionHandler` | ✅ Pass |\n| 2 | CORS configuration | No CORS config; conditional and no frontend origin evidence supplied | ⚠️ Not assessed |\n| 3 | CSRF configuration | No Spring Security / CSRF policy | ❌ Fail |\n| 4 | Session management | No Spring Security / session policy | ❌ Fail |\n| 5 | Request authorization | No `authorizeHttpRequests(...)` / default-deny rule | ❌ Fail |\n| 6 | Authentication provider / JWT filter | No authentication configuration | ❌ Fail |\n| 7 | Security headers | No `headers(...)` DSL / CSP configuration | ❌ Fail |\n\n## DI Registration Check\n| Bean | Stereotype | Scope | Injection Method | Issue | Verdict |\n|------|-----------|-------|-----------------|-------|---------|\n| `GreetingService` | `@Service` | Singleton default | No dependencies | No mutable shared state found | ✅ Pass |\n| `GreetingController` | `@RestController` | Singleton default | Constructor injection | None | ✅ Pass |\n| `GlobalExceptionHandler` | `@RestControllerAdvice` | Singleton default | No dependencies | None | ✅ Pass |\n| `GreetingControllerTest` | Test class | Test context | Field injection | `@Autowired private MockMvc mockMvc` | ⚠️ Warning |\n\n## application*.properties Secret Detection\n| File | Detected Secret | Type | Remediation |\n|------|----------------|------|-------------|\n| `sample-java-code/src/main/resources/application.yml` | None | N/A | No action for secrets |\n\n## Issues\n| # | Severity | Category | Target File | Line | Issue Description | Fix Example |\n|---|---------|---------|------------|------|-------------------|-------------|\n| 1 | Critical | Spring Security Filter Chain | `sample-java-code/pom.xml` | 25 | No Spring Security dependency or `SecurityFilterChain`; auth, authorization, CSRF/session policy, and headers are absent. | Add `spring-boot-starter-security` and a `SecurityConfig` defining explicit matchers, auth, CSRF/session policy, and headers. |\n| 2 | Critical | Application Properties | `sample-java-code/src/main/resources/application.yml` | 1 | `server.error.include-stacktrace=never` is not explicitly configured. | Add `server.error.include-stacktrace: never` in common and prod config. |\n| 3 | High | Application Properties | `sample-java-code/src/main/resources/application.yml` | 1 | Profile-based configuration separation is missing; only `application.yml` exists. | Add `application-dev.yml` and `application-prod.yml` with environment-specific settings. |\n| 4 | High | DI Registration Quality | `sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java` | 21 | Test uses field injection for `MockMvc`. | Use constructor injection or Spring test constructor autowiring. |\n| 5 | Medium | Security Settings | `sample-java-code/src/main/resources/application.yml` | 1 | Production logging policy and `logback-spring.xml` are absent. | Add prod `logging.level.root: WARN` and structured/profile-specific logging if deployable. |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|----------------|-------------|-------|\n| DI Registration Quality | 4/5 | Production beans use appropriate stereotypes and constructor injection; test field injection remains. |\n| Security Filter Chain | 1/5 | No Spring Security dependency or filter chain. |\n| Application Properties Quality | 2/5 | No secrets found, but stacktrace/profile settings are missing. |\n| Type-Safe Configuration | 5/5 | No custom configuration groups requiring `@ConfigurationProperties` were found. |\n| Security Settings | 1/5 | Security headers/auth settings/logback policy are absent. |\n| **Total Score** | **13/25** | |\n\n## Escalation Items (Requires Human Judgment)\nConfirm whether the sample API is intentionally public. If it is, encode that explicitly in Spring Security with narrow `permitAll` matchers and headers; if it is not, define the authentication model before OSS publication.",
+      "startedAt": "2026-06-04T13:02:29.553Z",
+      "completedAt": "2026-06-04T13:04:17.585Z",
+      "durationMs": 108032
+    },
+    {
+      "agentId": "security",
+      "threadId": "019e92ba-ab7f-7793-92af-b19d67d6eb3e",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Security review of sample-java-code found no injection, secrets, SSRF, unsafe deserialization, Struts remnants, or entity mass-assignment patterns. The main risks are missing Spring Security baseline controls, security headers, CSRF coverage, and DoS hardening for public HTTP endpoints.",
+      "findings": [
+        {
+          "id": "security-1",
+          "severity": "High",
+          "category": "A01 Broken Access Control / Security Baseline",
+          "title": "No Spring Security configuration or default-deny authorization boundary",
+          "description": "The application exposes /api/health and /api/greetings endpoints but has no spring-boot-starter-security dependency and no SecurityFilterChain. This means there is no default-deny authorization boundary, no framework CSRF integration, and no Spring Security header hardening. The current sample endpoints do not expose sensitive records, so the immediate data-exposure impact is limited, but this is unsafe as a reusable OSS Spring Boot baseline.",
+          "targetFile": "sample-java-code/pom.xml",
+          "lineStart": 25,
+          "lineEnd": 39,
+          "evidence": "Dependencies include validation, web, and test starters only; no spring-boot-starter-security. Controller mappings are present at sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java:20,34,45,57.",
+          "suggestedFix": "Add spring-boot-starter-security and a SecurityFilterChain. Explicitly permit only intended public endpoints such as /api/health, require authentication or a documented public contract for others, and keep anyRequest().authenticated() as the fallback.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "security-2",
+          "severity": "High",
+          "category": "Security Headers / A07 XSS Defense-in-Depth",
+          "title": "Security headers are not configured",
+          "description": "No configuration was found for Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, HSTS, Referrer-Policy, Permissions-Policy, or Server header suppression. Even JSON APIs benefit from these browser-facing controls, especially once endpoints are consumed by a frontend or exposed publicly.",
+          "targetFile": "sample-java-code/src/main/resources/application.yml",
+          "lineStart": 1,
+          "lineEnd": 6,
+          "evidence": "application.yml only sets server.port and spring.application.name. Targeted search found no SecurityFilterChain or header configuration in sample-java-code.",
+          "suggestedFix": "Configure headers through Spring Security, for example contentTypeOptions, frameOptions deny, CSP default-src 'self', HSTS for HTTPS deployments, strict-origin-when-cross-origin referrer policy, camera/microphone/geolocation permissions policy, and set server.server-header to blank where supported.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "security-3",
+          "severity": "Medium",
+          "category": "A05 Security Misconfiguration / CSRF",
+          "title": "POST endpoint has no CSRF protection or documented stateless API policy",
+          "description": "POST /api/greetings is exposed without Spring Security, so CSRF protection is unavailable. The current operation appears stateless and low impact, but the codebase does not document or enforce an API-only stateless policy. If this pattern is copied to state-changing endpoints, cross-site request submission becomes exploitable.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+          "lineStart": 57,
+          "lineEnd": 59,
+          "evidence": "@PostMapping(\"/greetings\") accepts a JSON request body. pom.xml has no Spring Security dependency and targeted search found no csrf configuration.",
+          "suggestedFix": "If browser session authentication will be used, enable Spring Security CSRF with CookieCsrfTokenRepository and require tokens on state-changing requests. If this is intentionally a stateless public API, document that decision and require non-cookie authentication before adding state-changing endpoints.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "security-4",
+          "severity": "High",
+          "category": "D Denial of Service / Rate Limiting",
+          "title": "Public endpoints have no rate limiting",
+          "description": "The health and greeting endpoints are public and no rate limiting filter, gateway policy, or bucket implementation was found. An attacker can flood /api/health or /api/greetings to consume request threads and application resources. This is especially relevant because these endpoints are intended for smoke or command checks and may be exposed in CI/demo environments.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+          "lineStart": 34,
+          "lineEnd": 58,
+          "evidence": "Public endpoint mappings exist for GET /api/health, GET /api/greetings, and POST /api/greetings. Targeted search found no Bucket4j, rate limiter, OncePerRequestFilter, FilterRegistrationBean, or gateway rate-limit configuration.",
+          "suggestedFix": "Add a small rate-limiting filter or gateway policy for public endpoints. Use stricter limits for POST endpoints and a separate inexpensive health-check path policy for infrastructure probes.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "security-5",
+          "severity": "High",
+          "category": "D Denial of Service / Request Limits",
+          "title": "HTTP request-size and connection timeout limits are not explicitly configured",
+          "description": "The API accepts query parameters and JSON request bodies, but application.yml does not set servlet/Tomcat request-size or connection timeout limits. Field validation limits name to 40 characters after binding, but large bodies are parsed before Bean Validation rejects invalid payloads, leaving a resource-exhaustion path.",
+          "targetFile": "sample-java-code/src/main/resources/application.yml",
+          "lineStart": 1,
+          "lineEnd": 6,
+          "evidence": "application.yml contains only server.port and spring.application.name. Targeted search found no server.tomcat.max-http-form-post-size, max-swallow-size, connection-timeout, keep-alive-timeout, or servlet multipart limits.",
+          "suggestedFix": "Set bounded request and connection settings appropriate for the sample, such as server.tomcat.max-http-form-post-size, server.tomcat.connection-timeout, server.tomcat.keep-alive-timeout, and any multipart limits if file upload is later added.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "security-6",
+          "severity": "Medium",
+          "category": "I Information Disclosure / Error Handling",
+          "title": "Global exception handling covers validation errors only",
+          "description": "Validation failures are sanitized, which is good, but the global handler does not cover unexpected exceptions or common request parsing failures. Current Spring Boot defaults usually avoid stack traces in responses, but the target does not explicitly set server.error.include-stacktrace/include-message or provide a generic sanitized fallback. Future changes could accidentally leak exception messages or framework error details.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+          "lineStart": 24,
+          "lineEnd": 54,
+          "evidence": "Handlers exist for MethodArgumentNotValidException, HandlerMethodValidationException, and ConstraintViolationException only. application.yml has no server.error.include-stacktrace or server.error.include-message settings.",
+          "suggestedFix": "Add explicit production-safe error properties: server.error.include-stacktrace=never and server.error.include-message=never. Consider a generic @ExceptionHandler(Exception.class) that returns a sanitized error with a correlation ID while logging server-side details safely.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "medium"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "security"
+          ],
+          "description": "Decide whether /api/greetings is intentionally public and stateless, or whether it should require authentication under the project-wide default-deny policy. This affects the correct SecurityFilterChain and CSRF design.",
+          "recommendedDecisionMaker": "Project maintainer / application owner"
+        },
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "security"
+          ],
+          "description": "Define deployment assumptions for TLS termination and public exposure. HSTS and Secure session-cookie settings require knowing whether HTTPS is terminated in-app or at a reverse proxy.",
+          "recommendedDecisionMaker": "Infrastructure owner"
+        }
+      ],
+      "designDeviations": [],
+      "score": 37,
+      "usage": {
+        "inputTokens": 152366,
+        "cachedInputTokens": 103424,
+        "outputTokens": 7155,
+        "reasoningOutputTokens": 1266
+      },
+      "rawMarkdown": "# Source Code Review Report: Security Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ❌ Fail\n- **Finding Count**: Critical: 0 / High: 4 / Medium: 2 / Low: 0\n\n---\n\n## Phase A: Implementation Compliance Check\n\n### OWASP Top 10 Check Results\n| # | Category | Findings | Count | Verdict |\n|---|---------|---------|--------|------|\n| A01 | Broken Access Control | No Spring Security dependency/configuration or default-deny boundary | 1 | ❌ |\n| A02 | Cryptographic Failures | No hardcoded secrets or password hashing code found; HTTPS/session cookie policy not configured | 0 direct vuln | ⚠️ |\n| A03 | Injection | No SQL/JdbcTemplate/native query/command execution patterns found | 0 | ✅ |\n| A07 | XSS | JSON-only API; no templates. Security headers/CSP missing | 1 | ❌ |\n| A08 | Mass Assignment | Uses GreetingRequest DTO, not entity binding | 0 | ✅ |\n| A10 | SSRF | No RestTemplate/WebClient/user-input URL fetches found | 0 | ✅ |\n\n### Authentication/Authorization Check\n| Endpoint | Auth Required | Role Restriction | IDOR Prevention | Verdict |\n|-------------|---------|----------|----------|------|\n| GET /api/health | No | None | N/A | ⚠️ acceptable only if intentionally public |\n| GET /api/greetings | No | None | N/A | ❌ no default-deny policy |\n| POST /api/greetings | No | None | N/A | ❌ no default-deny/CSRF baseline |\n\n### Hardcoded Secret Check\n| File | Location | Secret Type | Remediation |\n|---------|---------|--------------|--------|\n| None found | N/A | N/A | Continue using env placeholders for future secrets |\n\n### Security Header Check\n| Header | Expected | Actual | Verdict |\n|---------|--------|---------|------|\n| X-Content-Type-Options | nosniff | Not configured | ❌ |\n| X-Frame-Options | DENY | Not configured | ❌ |\n| Content-Security-Policy | default-src 'self' | Not configured | ❌ |\n| Strict-Transport-Security | includeSubDomains; max-age=31536000 | Not configured | ❌ |\n| Server | Suppressed | Not configured | ⚠️ |\n| Referrer-Policy | strict-origin-when-cross-origin | Not configured | ❌ |\n| Permissions-Policy | camera=(), microphone=(), geolocation=() | Not configured | ❌ |\n\n### Struts Legacy Pattern Check\n| Pattern | Files Found | Risk | Remediation |\n|---------|------------|------|-------------|\n| Struts imports/classes/tags | 0 | None observed | N/A |\n| request.getParameter/getAttribute | 0 | None observed | N/A |\n| @Autowired field injection in main code | 0 | None observed | N/A |\n\n---\n\n## Phase B: Attacker's Perspective Attack Resistance Analysis\n\n### STRIDE Attack Resistance Summary\n| STRIDE Category | Scenarios Verified | Sufficient | Insufficient | Unmitigated | Highest Risk |\n|---|---:|---:|---:|---:|---|\n| S: Spoofing | 5 | 0 | 2 | 3 | High |\n| T: Tampering | 7 | 2 | 1 | 4 | Medium |\n| R: Repudiation | 4 | 0 | 1 | 3 | Medium |\n| I: Information Disclosure | 7 | 3 | 2 | 2 | Medium |\n| D: Denial of Service | 6 | 1 | 1 | 4 | High |\n| E: Elevation of Privilege | 6 | 2 | 1 | 3 | High |\n\n### Business Logic Attack Resistance\n| # | Attack Scenario | Target Component | Defense Exists | Risk | Verdict |\n|---|-----------|----------------|-----------|--------|------|\n| BL-1 | Double-sell inventory | N/A, no commerce flow in sample | N/A | N/A | Not applicable |\n| BL-2 | Double-spend points | N/A | N/A | N/A | Not applicable |\n| BL-3 | Coupon double-use | N/A | N/A | N/A | Not applicable |\n| BL-4 | Partial checkout execution | N/A | N/A | N/A | Not applicable |\n| BL-5 | Cart merge abuse | N/A | N/A | N/A | Not applicable |\n| BL-6 | Coupon enumeration | N/A | N/A | N/A | Not applicable |\n| BL-7 | Email bombing | N/A | N/A | N/A | Not applicable |\n\n### Session Management Security\n| # | Attack Scenario | Defense Exists | Risk | Verdict |\n|---|-----------|-----------|--------|------|\n| SM-1 | Session fixation | No Spring Security/session policy found | High if sessions are introduced | ❌ |\n| SM-2 | Session timeout too long | Not configured | Medium if sessions are introduced | ⚠️ |\n| SM-3 | Concurrent session abuse | Not configured | Medium if sessions are introduced | ⚠️ |\n| SM-4 | Session data tampering | No sensitive cookies observed | Low current risk | ✅ |\n| SM-5 | Insecure session cookie | Not configured | High if sessions are introduced | ❌ |\n\n### Attack Scenario Detailed Analysis\n| # | Severity | STRIDE / BL / SM | Attack Scenario | Target File | Line # | Attack Method | Current Defense | Recommended Mitigation | Fix Code Example |\n|---|--------|---------------------|-----------|------------|--------|---------|-----------|---------|------------|\n| 1 | High | E/A01 | Access endpoints without any authentication or default-deny boundary | sample-java-code/pom.xml | 25 | Call mapped endpoints directly; future endpoints inherit open posture | None; no Spring Security dependency | Add Spring Security and SecurityFilterChain with explicit permitAll and anyRequest().authenticated() | `authorizeHttpRequests(auth -> auth.requestMatchers(\"/api/health\").permitAll().anyRequest().authenticated())` |\n| 2 | High | I/S/A07 | Use browser-facing weaknesses due to missing CSP/frame/content-type headers | sample-java-code/src/main/resources/application.yml | 1 | Clickjacking, MIME sniffing, weaker XSS containment | None found | Configure Spring Security headers | `headers -> headers.contentTypeOptions(withDefaults()).frameOptions(f -> f.deny())` |\n| 3 | Medium | T/CSRF | Cross-site POST to /api/greetings if cookie auth is later added | sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java | 57 | Auto-submit a request from attacker-controlled page | No CSRF framework present; operation currently stateless | Enable CSRF for browser-session app or document stateless public API policy | `csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())` |\n| 4 | High | D | Flood public endpoints | sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java | 34 | High-rate GET/POST requests consume request threads | Bean validation only | Add rate limiting filter/gateway policy | `OncePerRequestFilter` backed by token bucket per IP/API key |\n| 5 | High | D | Send very large JSON body before validation | sample-java-code/src/main/resources/application.yml | 1 | Oversized request body consumes parser/server resources | DTO field size validates after binding | Configure server request and timeout limits | `server.tomcat.connection-timeout: 5s` plus bounded post/body limits |\n| 6 | Medium | I | Trigger unhandled errors and rely on default error handling | sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java | 24 | Malformed/unexpected requests may reach default error controller | Validation errors sanitized only | Set explicit error disclosure properties and generic sanitized fallback | `server.error.include-stacktrace: never` |\n\n---\n\n## Consolidated Findings\n| # | Severity | Phase | Category | Target File | Line # | Finding | Fix Code Example |\n|---|--------|---------|---------|------------|--------|----------|------------|\n| 1 | High | A/B | Broken Access Control | sample-java-code/pom.xml | 25 | Missing Spring Security/default-deny boundary | Add spring-boot-starter-security + SecurityFilterChain |\n| 2 | High | A/B | Security Headers | sample-java-code/src/main/resources/application.yml | 1 | Missing browser security headers | Configure headers in Spring Security |\n| 3 | Medium | A/B | CSRF | sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java | 57 | POST endpoint lacks CSRF framework/policy | Enable CSRF or document stateless API policy |\n| 4 | High | B | DoS | sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java | 34 | No rate limiting on public endpoints | Add rate-limiting filter or gateway policy |\n| 5 | High | B | DoS | sample-java-code/src/main/resources/application.yml | 1 | No explicit request/connection limits | Configure Tomcat and servlet limits |\n| 6 | Medium | B | Information Disclosure | sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java | 24 | No explicit generic sanitized error fallback | Add safe error properties and generic handler |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|---------|-------------|------|\n| Injection Prevention | 5/5 | No injection surfaces found |\n| Authentication/Authorization | 2/5 | No Spring Security/default deny |\n| Secret Management | 5/5 | No secrets found |\n| Security Headers | 1/5 | Not configured |\n| CSRF Protection | 2/5 | No CSRF framework; current POST is stateless |\n| Rate Limiting / DoS Defense | 1/5 | No rate limits or request limits |\n| Spoofing Attack Resistance (S) | 2/5 | Session controls absent if auth is added |\n| Tampering Attack Resistance (T) | 4/5 | DTO validation exists; CSRF policy absent |\n| Information Disclosure Resistance (I) | 3/5 | Validation errors sanitized; generic hardening missing |\n| Privilege Escalation Resistance (E) | 2/5 | No admin/user flows, but no auth baseline |\n| Business Logic Attack Resistance | 5/5 | Commerce flows not present in target |\n| Session Management Security | 1/5 | No session security policy configured |\n| Struts Legacy Pattern Safety | 5/5 | No Struts remnants found |\n| **Total Score** | **37/65** | |\n\n## Escalation Items (Requires Human Judgment)\n- Decide whether /api/greetings is intentionally public/stateless or should be authenticated under the project default-deny policy.\n- Confirm TLS termination/deployment model before selecting HSTS and Secure cookie settings.\n",
+      "startedAt": "2026-06-04T13:02:47.591Z",
+      "completedAt": "2026-06-04T13:04:38.933Z",
+      "durationMs": 111342
+    },
+    {
+      "agentId": "dependency",
+      "threadId": "019e92ba-cb16-7f52-bd12-5207dd1c8ac6",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Dependency management review found 2 Critical and 1 Medium issue in sample-java-code/pom.xml: Spring Boot parent version does not match the required 3.2.x line, the project artifact is declared as SNAPSHOT for an OSS/release-quality target, and Maven encoding properties are missing.",
+      "findings": [
+        {
+          "id": "dependency-1",
+          "severity": "Critical",
+          "category": "Build configuration",
+          "title": "Spring Boot parent version is outside the required 3.2.x line",
+          "description": "The dependency review standard requires spring-boot-starter-parent version 3.2.x, but this module inherits Spring Boot 3.5.8. This breaks the required BOM baseline for Spring-managed dependencies under this review profile.",
+          "targetFile": "sample-java-code/pom.xml",
+          "lineStart": 10,
+          "lineEnd": 10,
+          "evidence": "<version>3.5.8</version>",
+          "suggestedFix": "Change the parent version to an approved Spring Boot 3.2.x release, or update the dependency standard if 3.5.x is intentionally adopted across the project.",
+          "sourceAgents": [
+            "dependency"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "dependency-2",
+          "severity": "Critical",
+          "category": "SNAPSHOT version exclusion",
+          "title": "Project artifact is declared with a SNAPSHOT version",
+          "description": "The POM declares the module version as 0.0.1-SNAPSHOT. The review standard forbids SNAPSHOT versions for production/release-quality builds; leaving the main artifact as SNAPSHOT makes release reproducibility and dependency resolution less stable if this module is consumed by other projects.",
+          "targetFile": "sample-java-code/pom.xml",
+          "lineStart": 16,
+          "lineEnd": 16,
+          "evidence": "<version>0.0.1-SNAPSHOT</version>",
+          "suggestedFix": "Use a non-SNAPSHOT release version for OSS/release builds, or isolate SNAPSHOT versions to non-production development profiles only.",
+          "sourceAgents": [
+            "dependency"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "dependency-3",
+          "severity": "Medium",
+          "category": "Build configuration",
+          "title": "Maven source and reporting encodings are not declared",
+          "description": "The POM only declares java.version and jacoco.version. The review standard requires project.build.sourceEncoding and project.reporting.outputEncoding to be UTF-8 for reproducible builds and reports.",
+          "targetFile": "sample-java-code/pom.xml",
+          "lineStart": 20,
+          "lineEnd": 23,
+          "evidence": "<properties>\n  <java.version>21</java.version>\n  <jacoco.version>0.8.14</jacoco.version>\n</properties>",
+          "suggestedFix": "Add <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> and <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding> under <properties>.",
+          "sourceAgents": [
+            "dependency"
+          ],
+          "confidence": "high"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "dependency"
+          ],
+          "description": "The required dependency list is module-role dependent. sample-java-code appears to be a minimal REST sample, so persistence, Thymeleaf, mail, Testcontainers, and PostgreSQL dependencies were treated as not applicable. If this directory is intended to represent the production backend, those dependencies should be reviewed as required.",
+          "recommendedDecisionMaker": "Repository maintainer or backend technical lead"
+        }
+      ],
+      "designDeviations": [],
+      "score": 16,
+      "usage": {
+        "inputTokens": 65248,
+        "cachedInputTokens": 54272,
+        "outputTokens": 4295,
+        "reasoningOutputTokens": 2246
+      },
+      "rawMarkdown": "# Source Code Review Report: Dependency Management Review\n\n## Summary\n- **Review Target**: sample-java-code/pom.xml\n- **Verdict**: ❌ Fail\n- **Finding Count**: Critical: 2 / High: 0 / Medium: 1 / Low: 0\n\n## Prohibited Dependency Detection Results\n| # | Dependency (groupId:artifactId) | Detected pom.xml | Replacement | Severity |\n|---|-------------------------------|-------------------|-------------|----------|\n| - | None detected | - | - | - |\n\n## SNAPSHOT Version Detection Results\n| # | Dependency | Version | Detected pom.xml |\n|---|-----------|---------|------------------|\n| 1 | project artifact com.codexskishop:sample-java-code | 0.0.1-SNAPSHOT | sample-java-code/pom.xml:16 |\n\n## Build Configuration Check\n| pom.xml | Parent POM | Java Version | Encoding | Verdict |\n|---------|-----------|--------------|----------|---------|\n| sample-java-code/pom.xml | spring-boot-starter-parent 3.5.8; expected 3.2.x | 21 | Missing source/reporting UTF-8 properties | ❌ Fail |\n\n## Required Dependency Verification\n| pom.xml | starter-web | starter-data-jpa | starter-security | flyway-core | actuator | Verdict |\n|---------|-------------|------------------|------------------|-------------|----------|---------|\n| sample-java-code/pom.xml | Present | N/A for minimal non-persistence sample | N/A unless this is a protected production API | N/A for minimal non-persistence sample | Absent; not reported as finding due sample scope ambiguity | ⚠️ Warning |\n\n## Findings\n| # | Severity | Category | Target pom.xml | Finding | Suggested Fix |\n|---|----------|----------|----------------|---------|---------------|\n| 1 | Critical | Build configuration | sample-java-code/pom.xml:10 | Parent POM is Spring Boot 3.5.8, but the review standard requires Spring Boot 3.2.x. | Use an approved 3.2.x parent release, or formally update the standard if 3.5.x is intended. |\n| 2 | Critical | SNAPSHOT version exclusion | sample-java-code/pom.xml:16 | Project artifact version is 0.0.1-SNAPSHOT. | Use a non-SNAPSHOT release version for OSS/release-quality builds. |\n| 3 | Medium | Build configuration | sample-java-code/pom.xml:20 | UTF-8 source and reporting encodings are not declared. | Add project.build.sourceEncoding and project.reporting.outputEncoding with UTF-8. |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|-----------------|-------------|-------|\n| Prohibited Dependency Compliance | 5/5 | No prohibited dependencies found. |\n| SNAPSHOT Exclusion | 2/5 | No SNAPSHOT dependency/plugin versions found, but the project artifact version is SNAPSHOT. |\n| Build Configuration | 2/5 | Java 21 is present, but parent version and encodings do not meet the review standard. |\n| Required Dependencies | 4/5 | Web, validation, and starter-test are present for the minimal API role; broader backend dependencies are scope-dependent. |\n| Version Consistency | 5/5 | Single-module POM; no cross-module version conflicts or explicit Spring starter versions detected. |\n| **Overall Score** | **16/25** | |\n\n## Escalation Items (Requires Human Judgment)\n- Confirm whether sample-java-code is only a minimal review sample or should be evaluated as the production Ski Shop backend. If it is production backend code, dependencies such as Spring Security, Actuator, Data JPA, Flyway, PostgreSQL driver, and integration-test support should be treated as required.",
+      "startedAt": "2026-06-04T13:02:55.684Z",
+      "completedAt": "2026-06-04T13:04:13.129Z",
+      "durationMs": 77445
+    },
+    {
+      "agentId": "test-quality",
+      "threadId": "019e92ba-f5ca-7e72-a6e5-ea88277fae69",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Test quality review found High-severity naming, AAA structure, and coverage/public-method gaps in sample-java-code. Existing JaCoCo artifacts show overall line/branch targets are met, but I could not rerun tests in the read-only sandbox.",
+      "findings": [
+        {
+          "id": "test-quality-1",
+          "severity": "High",
+          "category": "Test Naming Convention",
+          "title": "Controller test methods do not follow should_ExpectedResult_when_Condition",
+          "description": "All @Test methods in GreetingControllerTest use descriptive prose names, but none follow the required should_ExpectedResult_when_Condition camelCase convention. Test names are specifications under this review standard.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 24,
+          "lineEnd": 58,
+          "evidence": "healthReturnsUp, greetByQueryReturnsGreeting, greetByBodyReturnsGreeting, greetByQueryRejectsBlankName, greetByBodyRejectsBlankName",
+          "suggestedFix": "Rename methods, for example should_returnUp_when_healthEndpointRequested(), should_returnGreeting_when_validQueryNameProvided(), should_returnValidationError_when_blankBodyNameProvided().",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-2",
+          "severity": "High",
+          "category": "Test Naming Convention",
+          "title": "Service test methods do not follow should_ExpectedResult_when_Condition",
+          "description": "All @Test methods in GreetingServiceTest violate the required should_ExpectedResult_when_Condition naming convention.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+          "lineStart": 12,
+          "lineEnd": 26,
+          "evidence": "greetNormalizesRepeatedWhitespace, greetRejectsBlankName, greetRejectsNullName",
+          "suggestedFix": "Rename methods, for example should_returnGreetingWithNormalizedWhitespace_when_nameContainsRepeatedWhitespace(), should_throwIllegalArgumentException_when_nameIsBlank(), should_throwIllegalArgumentException_when_nameIsNull().",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-3",
+          "severity": "Medium",
+          "category": "Test Naming Convention",
+          "title": "Human-readable @DisplayName annotations are missing",
+          "description": "The review standard expects @DisplayName for human-readable test descriptions. Neither test class uses @DisplayName on any test method.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 24,
+          "lineEnd": 58,
+          "evidence": "@Test methods are present without @DisplayName annotations.",
+          "suggestedFix": "Add @DisplayName annotations describing the behavior in natural language, while keeping method names in should_ExpectedResult_when_Condition form.",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-4",
+          "severity": "High",
+          "category": "AAA Pattern",
+          "title": "Controller tests collapse Act and Assert into one MockMvc chain",
+          "description": "The controller tests call mockMvc.perform(...).andExpect(...) as one fluent statement without clear Arrange / Act / Assert separation. The required AAA structure is not visible, and Act is not isolated as a single result-producing call.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 26,
+          "lineEnd": 66,
+          "evidence": "Each test directly chains mockMvc.perform(...) with andExpect(...) assertions.",
+          "suggestedFix": "Store the action result before assertions, for example: // Act var result = mockMvc.perform(...); // Assert result.andExpect(...); Add blank lines or comments between Arrange, Act, and Assert.",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-5",
+          "severity": "High",
+          "category": "AAA Pattern",
+          "title": "Service tests do not separate Arrange, Act, and Assert",
+          "description": "The service tests embed the method call inside assertThat/assertThatThrownBy and do not separate Arrange, Act, and Assert blocks. This makes Act singularity and assertion intent harder to audit.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+          "lineStart": 14,
+          "lineEnd": 28,
+          "evidence": "assertThat(greetingService.greet(...).message()) and assertThatThrownBy(() -> greetingService.greet(...)) combine Act and Assert.",
+          "suggestedFix": "Use explicit blocks: arrange input, act by invoking greetingService.greet(input) or capturing the throwing lambda, then assert the response or exception.",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-6",
+          "severity": "High",
+          "category": "Coverage Criteria",
+          "title": "Public exception handler path is untested",
+          "description": "GlobalExceptionHandler.handleInvalidParameter is a public @ExceptionHandler method, but existing JaCoCo output reports the method missed. This violates the all-public-methods-tested requirement.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+          "lineStart": 35,
+          "lineEnd": 37,
+          "evidence": "sample-java-code/target/site/jacoco/jacoco.csv reports GlobalExceptionHandler METHOD_MISSED=1 and LINE_MISSED=1; jacoco.xml marks line 37 missed.",
+          "suggestedFix": "Add a MockMvc test that triggers HandlerMethodValidationException, such as a query name longer than @Size(max = 40), and assert 400 plus the sanitized ErrorResponse.",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "test-quality-7",
+          "severity": "Medium",
+          "category": "Boundary Value Tests",
+          "title": "Size boundary validation is not tested",
+          "description": "GreetingController validates name with @Size(max = 40), but tests only cover normal and blank values. Boundary cases at exactly 40 characters and 41 characters are missing.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 31,
+          "lineEnd": 66,
+          "evidence": "Tests cover valid short names and blank names, but no test exercises @Size(max = 40) on query or body inputs.",
+          "suggestedFix": "Add parameterized tests for 40-character valid names and 41-character rejected names for both query and JSON body paths.",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-8",
+          "severity": "High",
+          "category": "Coverage Criteria",
+          "title": "Controller error-case tests are fewer than happy-path tests",
+          "description": "The review standard requires error case tests to be equal to or greater than happy paths. GreetingControllerTest has three happy-path tests and two error-path tests.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 24,
+          "lineEnd": 66,
+          "evidence": "Happy paths: healthReturnsUp, greetByQueryReturnsGreeting, greetByBodyReturnsGreeting. Error paths: greetByQueryRejectsBlankName, greetByBodyRejectsBlankName.",
+          "suggestedFix": "Add error cases for oversized names, missing body, malformed JSON, and missing query parameter until error coverage is at least equal to happy-path coverage.",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "description": "Decide whether SampleJavaCodeApplication.main should be excluded from JaCoCo or covered by a context-load/application-start test. Existing JaCoCo output reports main as missed, but many teams intentionally exclude bootstrap classes.",
+          "recommendedDecisionMaker": "Project maintainer"
+        }
+      ],
+      "designDeviations": [],
+      "score": 14,
+      "usage": {
+        "inputTokens": 132068,
+        "cachedInputTokens": 78336,
+        "outputTokens": 5324,
+        "reasoningOutputTokens": 1317
+      },
+      "rawMarkdown": "# Source Code Review Report: Test Quality Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ❌ Fail\n- **Finding Count**: Critical: 0 / High: 6 / Medium: 2 / Low: 0\n\n## Test Naming Check\n| File | Violating Method | Current Name | Recommended Name |\n|------|------------------|--------------|------------------|\n| GreetingControllerTest.java | line 25 | healthReturnsUp | should_returnUp_when_healthEndpointRequested |\n| GreetingControllerTest.java | line 32 | greetByQueryReturnsGreeting | should_returnGreeting_when_validQueryNameProvided |\n| GreetingControllerTest.java | line 39 | greetByBodyReturnsGreeting | should_returnGreeting_when_validBodyNameProvided |\n| GreetingControllerTest.java | line 50 | greetByQueryRejectsBlankName | should_returnValidationError_when_blankQueryNameProvided |\n| GreetingControllerTest.java | line 58 | greetByBodyRejectsBlankName | should_returnValidationError_when_blankBodyNameProvided |\n| GreetingServiceTest.java | line 13 | greetNormalizesRepeatedWhitespace | should_returnGreetingWithNormalizedWhitespace_when_nameContainsRepeatedWhitespace |\n| GreetingServiceTest.java | line 19 | greetRejectsBlankName | should_throwIllegalArgumentException_when_nameIsBlank |\n| GreetingServiceTest.java | line 26 | greetRejectsNullName | should_throwIllegalArgumentException_when_nameIsNull |\n\n## AAA Pattern Check\n| File | Method | Arrange Clear | Act Single | Assert Clear | Verdict |\n|------|--------|---------------|------------|--------------|---------|\n| GreetingControllerTest.java | all tests | No | No | Partial | Fail |\n| GreetingServiceTest.java | all tests | Partial | No | Partial | Fail |\n\n## Test Type Coverage\n| Test Type | Exists | Framework | Target Layer | Verdict |\n|-----------|--------|-----------|--------------|---------|\n| Unit Test | Yes | JUnit 5 + AssertJ | GreetingService | Pass |\n| Integration Test (API) | Yes | @WebMvcTest + MockMvc | GreetingController | Pass |\n| DB Slice Test | N/A | N/A | No repository in target | Not applicable |\n| Security Test | N/A | N/A | No security layer in target | Not applicable |\n| E2E Test | No | N/A | Browser journey | Warning |\n\n## Coverage Verification\n| Layer | Target | Estimated Achievement | Untested Method Count | Verdict |\n|-------|--------|----------------------|-----------------------|---------|\n| Service | 80% branch | 100% branch from existing JaCoCo artifact | 0 | Pass |\n| Controller/API | 80% line/branch | GreetingController 100%; API package line 16/17 | 1 public exception handler | Fail |\n| Repository | 70% branch | N/A | N/A | Not applicable |\n| Overall | 80% line and branch | line 25/28, branch 4/4 from existing JaCoCo artifact | 2 including application main | Warning |\n\n## Findings\n| # | Severity | Category | Target File | Line | Finding | Fix Code Example |\n|---|----------|----------|-------------|------|---------|------------------|\n| 1 | High | Test Naming | GreetingControllerTest.java | 24 | Test methods do not follow should_ExpectedResult_when_Condition. | Rename to should_returnGreeting_when_validQueryNameProvided, etc. |\n| 2 | High | Test Naming | GreetingServiceTest.java | 12 | Test methods do not follow should_ExpectedResult_when_Condition. | Rename to should_throwIllegalArgumentException_when_nameIsBlank, etc. |\n| 3 | Medium | DisplayName | GreetingControllerTest.java | 24 | @DisplayName is missing on tests. | Add @DisplayName(\"Returns greeting when query name is valid\"). |\n| 4 | High | AAA Pattern | GreetingControllerTest.java | 26 | MockMvc Act and Assert are chained without AAA separation. | var result = mockMvc.perform(...); then result.andExpect(...). |\n| 5 | High | AAA Pattern | GreetingServiceTest.java | 14 | Service invocation is embedded inside assertion. | Capture result or exception in an Act block before asserting. |\n| 6 | High | Coverage | GlobalExceptionHandler.java | 35 | handleInvalidParameter is public and untested. | Add oversized query parameter test to trigger HandlerMethodValidationException. |\n| 7 | Medium | Boundary Values | GreetingControllerTest.java | 31 | @Size(max = 40) boundary is not tested. | Add 40-character accepted and 41-character rejected cases. |\n| 8 | High | Error Coverage | GreetingControllerTest.java | 24 | Error cases are fewer than happy paths. | Add missing parameter, oversized name, missing body, malformed JSON tests. |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|-----------------|-------------|-------|\n| Test Naming Convention | 1/5 | All test method names violate required pattern; @DisplayName absent. |\n| AAA Pattern | 2/5 | Tests are simple, but Act and Assert are not visibly separated. |\n| Test Type Coverage | 4/5 | Unit and WebMvc tests exist; repository/security not applicable. |\n| Coverage Criteria | 3/5 | Existing JaCoCo artifacts meet overall thresholds, but one public exception handler path is missed and boundary coverage is thin. |\n| Mock Quality | 4/5 | No Mockito misuse observed; no mocks are used. |\n| **Overall Score** | **14/25** | Fail due to High-severity naming, AAA, and public-method coverage findings. |\n\n## Escalation Items (Requires Human Judgment)\n- Decide whether SampleJavaCodeApplication.main should be excluded from JaCoCo or covered by a startup/context-load test. Existing JaCoCo output marks it missed, but bootstrap classes are often excluded by policy.\n\nNote: Tests were not rerun because the workspace is read-only. Coverage observations are based on existing target/site/jacoco artifacts.",
+      "startedAt": "2026-06-04T13:03:06.621Z",
+      "completedAt": "2026-06-04T13:04:55.052Z",
+      "durationMs": 108431
+    },
+    {
+      "agentId": "performance",
+      "threadId": "019e92bb-0c7e-7592-8afb-a179ef8343c5",
+      "status": "completed",
+      "verdict": "pass",
+      "summary": "Performance review of sample-java-code found no N+1, query-in-loop, missing pagination, in-memory DB filtering, or cache invalidation risks. The module has no JPA/repository layer and exposes only single-resource greeting/health endpoints.",
+      "findings": [],
+      "escalations": [],
+      "designDeviations": [],
+      "score": 25,
+      "usage": {
+        "inputTokens": 92878,
+        "cachedInputTokens": 64000,
+        "outputTokens": 2830,
+        "reasoningOutputTokens": 695
+      },
+      "rawMarkdown": "# Source Code Review Report: Performance Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ✅ Pass\n- **Finding Count**: Critical: 0 / High: 0 / Medium: 0 / Low: 0\n\n## N+1 Query Detection Results\n| # | File | Method | Line | Pattern | Fix Suggestion |\n|---|------|--------|------|---------|----------------|\n| - | - | - | - | No JPA entities, repositories, lazy associations, or DB calls found in target files. | - |\n\n## Pagination Check\n| Endpoint | Pagination Present | Default Size | Max Size | Verdict |\n|----------|-------------------|-------------|----------|---------|\n| GET /api/health | N/A | N/A | N/A | Pass: single health response |\n| GET /api/greetings | N/A | N/A | N/A | Pass: single greeting response |\n| POST /api/greetings | N/A | N/A | N/A | Pass: single greeting response |\n\n## JPA Query Optimization Check\n| File | Method | readOnly Txn | DTO Projection | exists vs count | Verdict |\n|------|--------|-------------|----------------|-----------------|---------|\n| sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java | health, greetByQuery, greetByBody | N/A | N/A | N/A | Pass: no persistence access |\n| sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java | greet | N/A | N/A | N/A | Pass: no persistence access |\n\n## Findings\n| # | Severity | Category | Target File | Line | Finding | Fix Code Example |\n|---|----------|----------|-------------|------|---------|-----------------|\n| - | - | - | - | - | No performance findings. | - |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|-----------------|-------------|-------|\n| N+1 Query Prevention | 5/5 | No ORM or repository access exists in target. |\n| JPA Query Optimization | 5/5 | No JPA queries, count checks, or in-memory DB filtering found. |\n| Pagination | 5/5 | No collection-returning endpoint exists. |\n| Memory Efficiency | 5/5 | No loops, stream collection chains, or hot-path string concatenation found. |\n| Cache Strategy | 5/5 | No frequent read query or mutable master data access exists. |\n| **Overall Score** | **25/25** | Performance risk is low for the reviewed sample scope. |\n\n## Escalation Items (Requires Human Judgment)\nNone.",
+      "startedAt": "2026-06-04T13:03:12.428Z",
+      "completedAt": "2026-06-04T13:04:04.782Z",
+      "durationMs": 52354
+    },
+    {
+      "agentId": "resilience",
+      "threadId": "019e92bb-3d9c-7662-ad1a-31c4001ef468",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Resilience review found no outbound HTTP clients, so retry/circuit-breaker/fallback checks are not applicable for the current sample API. The target fails operational resilience because Spring Boot Actuator liveness/readiness health probes are not implemented, and graceful shutdown is not configured.",
+      "findings": [
+        {
+          "id": "resilience-1",
+          "severity": "Critical",
+          "category": "Health Checks",
+          "title": "Spring Boot Actuator liveness/readiness probes are missing",
+          "description": "The application exposes a custom `/api/health` endpoint, but it does not include `spring-boot-starter-actuator` and does not configure `/actuator/health` or `/actuator/health/readiness`. This does not satisfy the required liveness/readiness probe contract for orchestration and production-style operation.",
+          "targetFile": "sample-java-code/pom.xml",
+          "lineStart": 25,
+          "lineEnd": 39,
+          "evidence": "Dependencies include validation, web, and test only; there is no `spring-boot-starter-actuator`. `sample-java-code/src/main/resources/application.yml` lines 1-6 also contain only port and application name, with no `management.endpoint.health.probes.enabled` or health exposure settings.",
+          "suggestedFix": "Add `spring-boot-starter-actuator`, then configure `management.endpoints.web.exposure.include: health,info`, `management.endpoint.health.probes.enabled: true`, and enable liveness/readiness state health indicators in `application.yml`. Keep `/api/health` only as a smoke endpoint if still needed, but do not use it as the orchestrator probe contract.",
+          "sourceAgents": [
+            "resilience"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "resilience-2",
+          "severity": "High",
+          "category": "Graceful Shutdown",
+          "title": "Graceful shutdown is not configured",
+          "description": "The application configuration does not enable graceful shutdown or define a shutdown phase timeout. During deploys or restarts, in-flight requests may be terminated abruptly instead of being drained.",
+          "targetFile": "sample-java-code/src/main/resources/application.yml",
+          "lineStart": 1,
+          "lineEnd": 6,
+          "evidence": "`application.yml` defines only `server.port` and `spring.application.name`; it has no `server.shutdown: graceful` or `spring.lifecycle.timeout-per-shutdown-phase` setting.",
+          "suggestedFix": "Add `server.shutdown: graceful` and a bounded `spring.lifecycle.timeout-per-shutdown-phase`, for example `20s`, to allow Spring Boot to finish in-flight requests during termination.",
+          "sourceAgents": [
+            "resilience"
+          ],
+          "confidence": "high"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "resilience"
+          ],
+          "description": "Confirm whether `sample-java-code` is intended to meet the same production-style operational readiness bar as the main application. If it is only a command-check fixture, the team may explicitly document reduced requirements; otherwise add Actuator probes and graceful shutdown now.",
+          "recommendedDecisionMaker": "Repository maintainer or service owner"
+        }
+      ],
+      "designDeviations": [],
+      "score": 17,
+      "usage": {
+        "inputTokens": 91652,
+        "cachedInputTokens": 64000,
+        "outputTokens": 3797,
+        "reasoningOutputTokens": 1226
+      },
+      "rawMarkdown": "# Source Code Review Report: Resilience Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: ❌ Fail\n- **Finding Count**: Critical: 1 / High: 1 / Medium: 0 / Low: 0\n\n## HTTP Client Management Check\n| Component | Bean-Managed | Timeout Configured | URL Externalized | Verdict |\n|-----------|-------------|-------------------|-----------------|---------|\n| sample-java-code | N/A - no outbound RestTemplate/WebClient/RestClient usage found | N/A | N/A | ✅ Pass |\n\n## Resilience4j Configuration Check\n| Client | @Retry | @CircuitBreaker | @TimeLimiter | Backoff | Verdict |\n|--------|--------|-----------------|-------------|---------|---------|\n| No external HTTP client detected | N/A | N/A | N/A | N/A | ✅ Pass / Not applicable |\n\n## Health Check Implementation Status\n| Component | /actuator/health | readiness | DataSource | Custom Indicators | Verdict |\n|-----------|-----------------|-----------|------------|------------------|---------|\n| sample-java-code | Missing | Missing | N/A - no datasource | Missing; only custom `/api/health` smoke endpoint exists | ❌ Fail |\n\n## Fallback Strategy\n| Component | External Dependency | Fallback on Failure | Defined | Verdict |\n|-----------|-------------------|--------------------|---------|---------|\n| sample-java-code | None detected | N/A | N/A | ✅ Pass / Not applicable |\n\n## Findings\n| # | Severity | Category | Target File | Line | Finding | Fix Code Example |\n|---|----------|----------|-------------|------|---------|------------------|\n| 1 | Critical | Health Checks | sample-java-code/pom.xml | 25 | Missing Spring Boot Actuator dependency and liveness/readiness configuration. A custom `/api/health` endpoint is not equivalent to `/actuator/health` and `/actuator/health/readiness`. | Add `spring-boot-starter-actuator`; configure `management.endpoints.web.exposure.include: health,info`, `management.endpoint.health.probes.enabled: true`, `management.health.livenessstate.enabled: true`, and `management.health.readinessstate.enabled: true`. |\n| 2 | High | Graceful Shutdown | sample-java-code/src/main/resources/application.yml | 1 | Graceful shutdown is not enabled, and shutdown phase timeout is not configured. | Add `server.shutdown: graceful` and `spring.lifecycle.timeout-per-shutdown-phase: 20s`. |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|-----------------|-------------|-------|\n| HTTP Client Management | 5/5 | No direct `new RestTemplate()` or outbound HTTP client usage found. |\n| Retry / CB | 5/5 | No external calls detected, so Resilience4j annotations are not required for current code. |\n| Health Checks | 1/5 | Actuator dependency and liveness/readiness probes are missing. |\n| Timeout Management | 5/5 | No external calls detected, so client timeout checks are not applicable. |\n| Fallback | 5/5 | No external dependencies detected. |\n| **Overall Score** | **21/25** | Operational probe gap is critical despite otherwise minimal dependency surface. |\n\n## Escalation Items (Requires Human Judgment)\n- Decide whether this sample project must meet full production-style Spring Boot operational readiness. If yes, add Actuator probes and graceful shutdown; if no, document the exception explicitly.",
+      "startedAt": "2026-06-04T13:03:24.998Z",
+      "completedAt": "2026-06-04T13:04:27.259Z",
+      "durationMs": 62261
+    }
+  ],
+  "findings": [
+    {
+      "id": "tech-lead-1",
+      "severity": "Critical",
+      "category": "Prohibited Pattern",
+      "title": "Field injection with @Autowired is used in test code",
+      "description": "The zero-tolerance checklist prohibits @Autowired field injection anywhere in the target. GreetingControllerTest injects MockMvc into a mutable field instead of using constructor injection.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 21,
+      "lineEnd": 22,
+      "evidence": "@Autowired\nprivate MockMvc mockMvc;",
+      "suggestedFix": "Use JUnit 5 constructor injection: `GreetingControllerTest(MockMvc mockMvc) { this.mockMvc = mockMvc; }` with a `private final MockMvc mockMvc;` field.",
+      "sourceAgents": [
+        "tech-lead"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "tech-lead-2",
+      "severity": "Critical",
+      "category": "Prohibited Pattern",
+      "title": "Spring Service is directly instantiated with new",
+      "description": "The zero-tolerance checklist prohibits direct instantiation of DI-target Service classes. GreetingServiceTest creates `new GreetingService()` directly instead of obtaining the service through Spring or isolating the pure logic outside a Spring-managed Service.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+      "lineStart": 10,
+      "lineEnd": 10,
+      "evidence": "private final GreetingService greetingService = new GreetingService();",
+      "suggestedFix": "For strict compliance, use Spring-managed construction such as `@SpringBootTest` constructor injection, or move pure normalization/greeting logic into a non-Spring domain helper that can be instantiated directly while keeping `GreetingService` injected.",
+      "sourceAgents": [
+        "tech-lead"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "tech-lead-3",
+      "severity": "Medium",
+      "category": "API Consistency",
+      "title": "Some invalid requests can bypass the unified ErrorResponse shape",
+      "description": "GlobalExceptionHandler centralizes several validation exceptions, but the GET endpoint has a required `name` query parameter. If the parameter is omitted, Spring MVC raises MissingServletRequestParameterException, which is not handled here and can fall back to Spring Boot's default error body instead of the project's ErrorResponse contract.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "lineStart": 24,
+      "lineEnd": 47,
+      "evidence": "Handlers exist for MethodArgumentNotValidException, HandlerMethodValidationException, and ConstraintViolationException only; GreetingController requires `@RequestParam ... String name` at line 47.",
+      "suggestedFix": "Add an `@ExceptionHandler(MissingServletRequestParameterException.class)` that returns the same sanitized `ErrorResponse`, and add a MockMvc test for `/api/greetings` without `name`.",
+      "sourceAgents": [
+        "tech-lead"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "architecture-1",
+      "severity": "Critical",
+      "category": "Layer Dependency Direction",
+      "title": "Service layer depends on API/presentation DTO",
+      "description": "`GreetingService` imports and returns `GreetingResponse` from the `api` package. This reverses the intended boundary because service code is now coupled to presentation/API contract types instead of staying independent beneath the controller/API layer.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+      "lineStart": 3,
+      "lineEnd": 24,
+      "evidence": "Line 3 imports `com.codexskishop.sample.api.GreetingResponse`; lines 19 and 24 expose that API DTO from the service method.",
+      "suggestedFix": "Move response DTOs to `dto/response` and import from there, or have `GreetingService` return a domain/value result such as `String` and let the controller map it to `GreetingResponse`.",
+      "sourceAgents": [
+        "architecture"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "architecture-2",
+      "severity": "High",
+      "category": "Project Structure",
+      "title": "Controller, DTOs, and exception advice are collapsed into one `api` package",
+      "description": "The target keeps `GreetingController`, request/response records, error response, and `GlobalExceptionHandler` in `com.codexskishop.sample.api`. The required architecture separates these responsibilities into `controller`, `dto/request`, `dto/response`, and `exception`, which makes package boundaries explicit and prevents layer bleed.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+      "lineStart": 1,
+      "lineEnd": 1,
+      "evidence": "All API-facing classes declare `package com.codexskishop.sample.api;`; directory scan shows only `api` and `service` packages under `src/main/java/com/codexskishop/sample`.",
+      "suggestedFix": "Move `GreetingController` to `controller`, `GreetingRequest` to `dto/request`, `GreetingResponse`, `HealthResponse`, and `ErrorResponse` to `dto/response`, and `GlobalExceptionHandler` to `exception`.",
+      "sourceAgents": [
+        "architecture"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "architecture-3",
+      "severity": "High",
+      "category": "Spring Boot Configuration",
+      "title": "No Spring Security configuration is present",
+      "description": "The architecture checklist requires a `config/SecurityConfig.java` with `@Configuration`, `@EnableWebSecurity`, and a `SecurityFilterChain` bean. The target has no `config` package, no security configuration class, and the POM does not include `spring-boot-starter-security`.",
+      "targetFile": "sample-java-code/pom.xml",
+      "lineStart": 25,
+      "lineEnd": 39,
+      "evidence": "Dependencies include validation, web, and test only; source search found no `SecurityFilterChain`, `@EnableWebSecurity`, or `@Configuration` class.",
+      "suggestedFix": "Add `spring-boot-starter-security` and a `config/SecurityConfig` defining public health access and explicit access rules for greeting endpoints, or document an approved public-only sample exception if security is intentionally out of scope.",
+      "sourceAgents": [
+        "architecture"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "architecture-4",
+      "severity": "Medium",
+      "category": "Spring Boot Configuration",
+      "title": "Profile-separated configuration is missing",
+      "description": "Only a single `application.yml` exists. The architecture checklist expects common, development, and production profile separation so environment-specific settings do not collapse into one file as the service grows.",
+      "targetFile": "sample-java-code/src/main/resources/application.yml",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "evidence": "`application.yml` contains only server port and application name; no `application-dev.yml` or `application-prod.yml` was present in the target file list or `rg --files` output.",
+      "suggestedFix": "Keep common settings in `application.yml` and add `application-dev.yml` / `application-prod.yml` for environment-specific server, logging, security, datasource, and JPA settings when those concerns are introduced.",
+      "sourceAgents": [
+        "architecture"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "api-endpoint-1",
+      "severity": "High",
+      "category": "Spring MVC Controller Implementation Pattern",
+      "title": "REST controller is outside the required controller package convention",
+      "description": "GreetingController is a Spring MVC endpoint class but is placed in com.codexskishop.sample.api rather than a controller package. The review standard requires controller classes to live under the controller/ package so endpoint ownership and component conventions stay consistent.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+      "lineStart": 1,
+      "lineEnd": 20,
+      "evidence": "package com.codexskishop.sample.api; ... @RestController ... @RequestMapping(\"/api\")",
+      "suggestedFix": "Move the endpoint class to a controller package such as com.codexskishop.sample.controller, or document and standardize api as the approved REST-controller package if this sample module intentionally diverges.",
+      "sourceAgents": [
+        "api-endpoint"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "api-endpoint-2",
+      "severity": "High",
+      "category": "Error Response Design",
+      "title": "Validation errors use a custom DTO instead of RFC 9457 ProblemDetail",
+      "description": "GlobalExceptionHandler returns ResponseEntity<ErrorResponse> and does not extend ResponseEntityExceptionHandler or produce Spring ProblemDetail responses. This does not satisfy the stated Spring Boot 3.2+ error-response convention for RFC 9457-compatible responses.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "lineStart": 15,
+      "lineEnd": 55,
+      "evidence": "@RestControllerAdvice public class GlobalExceptionHandler { ... public ResponseEntity<ErrorResponse> ... .body(new ErrorResponse(\"Request validation failed.\", Instant.now()))",
+      "suggestedFix": "Extend ResponseEntityExceptionHandler and return ProblemDetail, for example ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, \"Request validation failed.\"); include stable fields such as title/status/detail without exposing internals.",
+      "sourceAgents": [
+        "api-endpoint"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-1",
+      "severity": "Critical",
+      "category": "Prohibited Pattern",
+      "title": "Field injection with @Autowired remains in Java test source",
+      "description": "The standards prohibit @Autowired field injection in all Java files. This test injects MockMvc through a mutable field instead of constructor injection.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 21,
+      "lineEnd": 22,
+      "evidence": "@Autowired\nprivate MockMvc mockMvc;",
+      "suggestedFix": "Use constructor injection with a final field, for example `private final MockMvc mockMvc;` and an `@Autowired GreetingControllerTest(MockMvc mockMvc)` constructor, or Spring/JUnit constructor injection configured for the test.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-2",
+      "severity": "Critical",
+      "category": "Prohibited Pattern",
+      "title": "DI-managed service is directly instantiated in Java test source",
+      "description": "The standards prohibit direct `new XxxService()` instantiation of DI-managed beans in all Java files. `GreetingService` is annotated with `@Service`, but the test constructs it directly.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+      "lineStart": 10,
+      "lineEnd": 10,
+      "evidence": "private final GreetingService greetingService = new GreetingService();",
+      "suggestedFix": "Inject the service through Spring test constructor injection, or extract pure domain logic into a non-Spring class and test that class directly while keeping the Spring-managed service wired through DI.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "java-standards-3",
+      "severity": "High",
+      "category": "DI Pattern Quality",
+      "title": "Service has no corresponding interface and controller depends on concrete implementation",
+      "description": "The DI checklist requires Service/Repository classes to have corresponding interfaces. `GreetingService` is a concrete `@Service`, and `GreetingController` injects that concrete type directly.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+      "lineStart": 9,
+      "lineEnd": 10,
+      "evidence": "@Service\npublic class GreetingService {",
+      "suggestedFix": "Introduce a no-prefix interface such as `GreetingService` or `GreetingUseCase`, move the implementation to a descriptively named class such as `DefaultGreetingService`, and inject the interface in `GreetingController`.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-4",
+      "severity": "High",
+      "category": "Null Safety",
+      "title": "Public service method has ambiguous null contract",
+      "description": "`greet(String name)` accepts a parameter that is later treated as nullable by `normalizeName`, but the public API lacks `@Nullable`/`@NonNull` annotation or an explicit null contract in the type system.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+      "lineStart": 19,
+      "lineEnd": 29,
+      "evidence": "public GreetingResponse greet(String name) {\n...\nif (name == null) {\n  return \"\";\n}",
+      "suggestedFix": "Declare the intended contract explicitly. Prefer `greet(@NonNull String name)` with `Objects.requireNonNull` if callers must not pass null, or `greet(@Nullable String name)` if null is intentionally normalized to a validation failure.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-5",
+      "severity": "Medium",
+      "category": "Platform Consistency",
+      "title": "Spring Boot version does not match the agent's Spring Boot 3.2.x target",
+      "description": "The review agent definition targets Java 21 with Spring Boot 3.2.x, but the sample module uses Spring Boot 3.5.8. This may be intentional for the sample, but it is a standards drift from the stated target platform.",
+      "targetFile": "sample-java-code/pom.xml",
+      "lineStart": 10,
+      "lineEnd": 10,
+      "evidence": "<version>3.5.8</version>",
+      "suggestedFix": "Align the parent version with the project-approved Spring Boot 3.2.x baseline, or document that this sample module is intentionally allowed to use 3.5.x.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "java-standards-6",
+      "severity": "Medium",
+      "category": "Time Handling",
+      "title": "Direct Instant.now() call is not Clock-injected",
+      "description": "The Java instructions prefer `Instant`/`LocalDateTime` with `Clock` for time handling. Direct `Instant.now()` makes error timestamp behavior harder to test deterministically and less consistent with injected time sources.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "lineStart": 54,
+      "lineEnd": 54,
+      "evidence": ".body(new ErrorResponse(\"Request validation failed.\", Instant.now()));",
+      "suggestedFix": "Inject `Clock` into `GlobalExceptionHandler` and call `Instant.now(clock)`. Provide a production `Clock.systemUTC()` bean and fixed clocks in tests.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "java-standards-7",
+      "severity": "Low",
+      "category": "Java 21 Feature Adoption",
+      "title": "Obvious local variable can use var",
+      "description": "The local variable type is obvious from the initializer. The standards encourage `var` where the type is clear from context.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+      "lineStart": 20,
+      "lineEnd": 20,
+      "evidence": "String normalizedName = normalizeName(name);",
+      "suggestedFix": "Use `var normalizedName = normalizeName(name);` if the project applies the `var` rule strictly.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "async-concurrency-1",
+      "severity": "High",
+      "category": "Virtual Thread Adoption",
+      "title": "Virtual threads are not enabled for the Java 21 Spring Boot application",
+      "description": "The application is configured for Java 21, but application.yml does not set `spring.threads.virtual.enabled=true`. Under the review checklist, Java 21 Spring Boot services should opt into virtual threads unless there is a documented reason not to, so request handling remains platform-thread based.",
+      "targetFile": "sample-java-code/src/main/resources/application.yml",
+      "lineStart": 4,
+      "lineEnd": 6,
+      "evidence": "`spring:` only contains `application.name`; there is no `spring.threads.virtual.enabled` setting.",
+      "suggestedFix": "Add `spring.threads.virtual.enabled: true` under the Spring configuration, for example:\n\nspring:\n  threads:\n    virtual:\n      enabled: true\n  application:\n    name: sample-java-code",
+      "sourceAgents": [
+        "async-concurrency"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "config-di-1",
+      "severity": "Critical",
+      "category": "Spring Security Filter Chain",
+      "title": "No Spring Security dependency or SecurityFilterChain is configured",
+      "description": "The module declares validation, web, and test starters only, and the reviewed source contains no SecurityFilterChain bean. As a result, request authorization, authentication provider/filter setup, session policy, CSRF policy, and security headers are all absent for the API surface. This violates the required filter-chain review standard and leaves future non-public endpoints unprotected by default.",
+      "targetFile": "sample-java-code/pom.xml",
+      "lineStart": 25,
+      "lineEnd": 39,
+      "evidence": "pom.xml dependencies include spring-boot-starter-validation, spring-boot-starter-web, and spring-boot-starter-test only; repository search found no SecurityFilterChain definition in sample-java-code.",
+      "suggestedFix": "Add spring-boot-starter-security and a @Configuration class defining a SecurityFilterChain with explicit CSRF/session policy, authorizeHttpRequests default-deny behavior, authentication mechanism, and headers(...) configuration. Public endpoints such as /api/health should be explicitly permitAll if intended.",
+      "sourceAgents": [
+        "config-di"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "config-di-2",
+      "severity": "Critical",
+      "category": "Application Properties",
+      "title": "Stack trace disclosure is not explicitly disabled",
+      "description": "application.yml does not set server.error.include-stacktrace=never. Although Spring Boot defaults may currently be safe, the project standard requires the setting to be explicit in common and production configuration so profile changes or future overrides do not expose stack traces to clients.",
+      "targetFile": "sample-java-code/src/main/resources/application.yml",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "evidence": "application.yml only configures server.port and spring.application.name; no server.error.include-stacktrace setting is present, and no application-prod.yml/properties file exists.",
+      "suggestedFix": "Add server.error.include-stacktrace: never to application.yml and application-prod.yml. Consider also setting server.error.include-message: never for production-facing APIs.",
+      "sourceAgents": [
+        "config-di"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "config-di-3",
+      "severity": "High",
+      "category": "Application Properties",
+      "title": "Profile-based configuration separation is missing",
+      "description": "Only a single application.yml exists. The review standard expects common, development, and production profile configuration to be separated so production logging, server hardening, and secret sourcing cannot accidentally inherit development defaults.",
+      "targetFile": "sample-java-code/src/main/resources/application.yml",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "evidence": "find sample-java-code/src/main/resources -maxdepth 1 -type f -name 'application*' returned only sample-java-code/src/main/resources/application.yml.",
+      "suggestedFix": "Keep common settings in application.yml, add application-dev.yml for local developer defaults, and add application-prod.yml with explicit production-safe logging, error, server-header, and externalized secret settings if any secrets are introduced later.",
+      "sourceAgents": [
+        "config-di"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "config-di-4",
+      "severity": "High",
+      "category": "DI Registration Quality",
+      "title": "Test class uses field injection",
+      "description": "GreetingControllerTest injects MockMvc through an @Autowired field. The repository and review standard forbid field injection because it hides dependencies and makes object construction less explicit. This is test code, so the production runtime risk is lower than field injection in a Spring bean, but it still violates the stated DI rule.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 21,
+      "lineEnd": 22,
+      "evidence": "@Autowired private MockMvc mockMvc;",
+      "suggestedFix": "Use constructor injection for the test dependency, for example an @Autowired constructor assigning a final MockMvc field, or configure JUnit/Spring test constructor autowiring consistently.",
+      "sourceAgents": [
+        "config-di"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "config-di-5",
+      "severity": "Medium",
+      "category": "Security Settings",
+      "title": "Production logging policy and logback-spring.xml are absent",
+      "description": "No production profile logging level or logback-spring.xml exists. The review standard expects production root logging to be WARN or above and structured/profile-specific logging to reduce accidental sensitive data exposure and noisy logs.",
+      "targetFile": "sample-java-code/src/main/resources/application.yml",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "evidence": "application.yml has no logging.level.* entries, no application-prod.yml exists, and no logback-spring.xml was found in sample-java-code/src/main/resources.",
+      "suggestedFix": "Add application-prod.yml with logging.level.root: WARN and a logback-spring.xml if structured/profile-specific logging is required for the sample's deployment target.",
+      "sourceAgents": [
+        "config-di"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "security-1",
+      "severity": "High",
+      "category": "A01 Broken Access Control / Security Baseline",
+      "title": "No Spring Security configuration or default-deny authorization boundary",
+      "description": "The application exposes /api/health and /api/greetings endpoints but has no spring-boot-starter-security dependency and no SecurityFilterChain. This means there is no default-deny authorization boundary, no framework CSRF integration, and no Spring Security header hardening. The current sample endpoints do not expose sensitive records, so the immediate data-exposure impact is limited, but this is unsafe as a reusable OSS Spring Boot baseline.",
+      "targetFile": "sample-java-code/pom.xml",
+      "lineStart": 25,
+      "lineEnd": 39,
+      "evidence": "Dependencies include validation, web, and test starters only; no spring-boot-starter-security. Controller mappings are present at sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java:20,34,45,57.",
+      "suggestedFix": "Add spring-boot-starter-security and a SecurityFilterChain. Explicitly permit only intended public endpoints such as /api/health, require authentication or a documented public contract for others, and keep anyRequest().authenticated() as the fallback.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "security-2",
+      "severity": "High",
+      "category": "Security Headers / A07 XSS Defense-in-Depth",
+      "title": "Security headers are not configured",
+      "description": "No configuration was found for Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, HSTS, Referrer-Policy, Permissions-Policy, or Server header suppression. Even JSON APIs benefit from these browser-facing controls, especially once endpoints are consumed by a frontend or exposed publicly.",
+      "targetFile": "sample-java-code/src/main/resources/application.yml",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "evidence": "application.yml only sets server.port and spring.application.name. Targeted search found no SecurityFilterChain or header configuration in sample-java-code.",
+      "suggestedFix": "Configure headers through Spring Security, for example contentTypeOptions, frameOptions deny, CSP default-src 'self', HSTS for HTTPS deployments, strict-origin-when-cross-origin referrer policy, camera/microphone/geolocation permissions policy, and set server.server-header to blank where supported.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "security-3",
+      "severity": "Medium",
+      "category": "A05 Security Misconfiguration / CSRF",
+      "title": "POST endpoint has no CSRF protection or documented stateless API policy",
+      "description": "POST /api/greetings is exposed without Spring Security, so CSRF protection is unavailable. The current operation appears stateless and low impact, but the codebase does not document or enforce an API-only stateless policy. If this pattern is copied to state-changing endpoints, cross-site request submission becomes exploitable.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+      "lineStart": 57,
+      "lineEnd": 59,
+      "evidence": "@PostMapping(\"/greetings\") accepts a JSON request body. pom.xml has no Spring Security dependency and targeted search found no csrf configuration.",
+      "suggestedFix": "If browser session authentication will be used, enable Spring Security CSRF with CookieCsrfTokenRepository and require tokens on state-changing requests. If this is intentionally a stateless public API, document that decision and require non-cookie authentication before adding state-changing endpoints.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "security-4",
+      "severity": "High",
+      "category": "D Denial of Service / Rate Limiting",
+      "title": "Public endpoints have no rate limiting",
+      "description": "The health and greeting endpoints are public and no rate limiting filter, gateway policy, or bucket implementation was found. An attacker can flood /api/health or /api/greetings to consume request threads and application resources. This is especially relevant because these endpoints are intended for smoke or command checks and may be exposed in CI/demo environments.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+      "lineStart": 34,
+      "lineEnd": 58,
+      "evidence": "Public endpoint mappings exist for GET /api/health, GET /api/greetings, and POST /api/greetings. Targeted search found no Bucket4j, rate limiter, OncePerRequestFilter, FilterRegistrationBean, or gateway rate-limit configuration.",
+      "suggestedFix": "Add a small rate-limiting filter or gateway policy for public endpoints. Use stricter limits for POST endpoints and a separate inexpensive health-check path policy for infrastructure probes.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "security-5",
+      "severity": "High",
+      "category": "D Denial of Service / Request Limits",
+      "title": "HTTP request-size and connection timeout limits are not explicitly configured",
+      "description": "The API accepts query parameters and JSON request bodies, but application.yml does not set servlet/Tomcat request-size or connection timeout limits. Field validation limits name to 40 characters after binding, but large bodies are parsed before Bean Validation rejects invalid payloads, leaving a resource-exhaustion path.",
+      "targetFile": "sample-java-code/src/main/resources/application.yml",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "evidence": "application.yml contains only server.port and spring.application.name. Targeted search found no server.tomcat.max-http-form-post-size, max-swallow-size, connection-timeout, keep-alive-timeout, or servlet multipart limits.",
+      "suggestedFix": "Set bounded request and connection settings appropriate for the sample, such as server.tomcat.max-http-form-post-size, server.tomcat.connection-timeout, server.tomcat.keep-alive-timeout, and any multipart limits if file upload is later added.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "security-6",
+      "severity": "Medium",
+      "category": "I Information Disclosure / Error Handling",
+      "title": "Global exception handling covers validation errors only",
+      "description": "Validation failures are sanitized, which is good, but the global handler does not cover unexpected exceptions or common request parsing failures. Current Spring Boot defaults usually avoid stack traces in responses, but the target does not explicitly set server.error.include-stacktrace/include-message or provide a generic sanitized fallback. Future changes could accidentally leak exception messages or framework error details.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "lineStart": 24,
+      "lineEnd": 54,
+      "evidence": "Handlers exist for MethodArgumentNotValidException, HandlerMethodValidationException, and ConstraintViolationException only. application.yml has no server.error.include-stacktrace or server.error.include-message settings.",
+      "suggestedFix": "Add explicit production-safe error properties: server.error.include-stacktrace=never and server.error.include-message=never. Consider a generic @ExceptionHandler(Exception.class) that returns a sanitized error with a correlation ID while logging server-side details safely.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "dependency-1",
+      "severity": "Critical",
+      "category": "Build configuration",
+      "title": "Spring Boot parent version is outside the required 3.2.x line",
+      "description": "The dependency review standard requires spring-boot-starter-parent version 3.2.x, but this module inherits Spring Boot 3.5.8. This breaks the required BOM baseline for Spring-managed dependencies under this review profile.",
+      "targetFile": "sample-java-code/pom.xml",
+      "lineStart": 10,
+      "lineEnd": 10,
+      "evidence": "<version>3.5.8</version>",
+      "suggestedFix": "Change the parent version to an approved Spring Boot 3.2.x release, or update the dependency standard if 3.5.x is intentionally adopted across the project.",
+      "sourceAgents": [
+        "dependency"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "dependency-2",
+      "severity": "Critical",
+      "category": "SNAPSHOT version exclusion",
+      "title": "Project artifact is declared with a SNAPSHOT version",
+      "description": "The POM declares the module version as 0.0.1-SNAPSHOT. The review standard forbids SNAPSHOT versions for production/release-quality builds; leaving the main artifact as SNAPSHOT makes release reproducibility and dependency resolution less stable if this module is consumed by other projects.",
+      "targetFile": "sample-java-code/pom.xml",
+      "lineStart": 16,
+      "lineEnd": 16,
+      "evidence": "<version>0.0.1-SNAPSHOT</version>",
+      "suggestedFix": "Use a non-SNAPSHOT release version for OSS/release builds, or isolate SNAPSHOT versions to non-production development profiles only.",
+      "sourceAgents": [
+        "dependency"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "dependency-3",
+      "severity": "Medium",
+      "category": "Build configuration",
+      "title": "Maven source and reporting encodings are not declared",
+      "description": "The POM only declares java.version and jacoco.version. The review standard requires project.build.sourceEncoding and project.reporting.outputEncoding to be UTF-8 for reproducible builds and reports.",
+      "targetFile": "sample-java-code/pom.xml",
+      "lineStart": 20,
+      "lineEnd": 23,
+      "evidence": "<properties>\n  <java.version>21</java.version>\n  <jacoco.version>0.8.14</jacoco.version>\n</properties>",
+      "suggestedFix": "Add <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> and <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding> under <properties>.",
+      "sourceAgents": [
+        "dependency"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-1",
+      "severity": "High",
+      "category": "Test Naming Convention",
+      "title": "Controller test methods do not follow should_ExpectedResult_when_Condition",
+      "description": "All @Test methods in GreetingControllerTest use descriptive prose names, but none follow the required should_ExpectedResult_when_Condition camelCase convention. Test names are specifications under this review standard.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 24,
+      "lineEnd": 58,
+      "evidence": "healthReturnsUp, greetByQueryReturnsGreeting, greetByBodyReturnsGreeting, greetByQueryRejectsBlankName, greetByBodyRejectsBlankName",
+      "suggestedFix": "Rename methods, for example should_returnUp_when_healthEndpointRequested(), should_returnGreeting_when_validQueryNameProvided(), should_returnValidationError_when_blankBodyNameProvided().",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-2",
+      "severity": "High",
+      "category": "Test Naming Convention",
+      "title": "Service test methods do not follow should_ExpectedResult_when_Condition",
+      "description": "All @Test methods in GreetingServiceTest violate the required should_ExpectedResult_when_Condition naming convention.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+      "lineStart": 12,
+      "lineEnd": 26,
+      "evidence": "greetNormalizesRepeatedWhitespace, greetRejectsBlankName, greetRejectsNullName",
+      "suggestedFix": "Rename methods, for example should_returnGreetingWithNormalizedWhitespace_when_nameContainsRepeatedWhitespace(), should_throwIllegalArgumentException_when_nameIsBlank(), should_throwIllegalArgumentException_when_nameIsNull().",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-3",
+      "severity": "Medium",
+      "category": "Test Naming Convention",
+      "title": "Human-readable @DisplayName annotations are missing",
+      "description": "The review standard expects @DisplayName for human-readable test descriptions. Neither test class uses @DisplayName on any test method.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 24,
+      "lineEnd": 58,
+      "evidence": "@Test methods are present without @DisplayName annotations.",
+      "suggestedFix": "Add @DisplayName annotations describing the behavior in natural language, while keeping method names in should_ExpectedResult_when_Condition form.",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-4",
+      "severity": "High",
+      "category": "AAA Pattern",
+      "title": "Controller tests collapse Act and Assert into one MockMvc chain",
+      "description": "The controller tests call mockMvc.perform(...).andExpect(...) as one fluent statement without clear Arrange / Act / Assert separation. The required AAA structure is not visible, and Act is not isolated as a single result-producing call.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 26,
+      "lineEnd": 66,
+      "evidence": "Each test directly chains mockMvc.perform(...) with andExpect(...) assertions.",
+      "suggestedFix": "Store the action result before assertions, for example: // Act var result = mockMvc.perform(...); // Assert result.andExpect(...); Add blank lines or comments between Arrange, Act, and Assert.",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-5",
+      "severity": "High",
+      "category": "AAA Pattern",
+      "title": "Service tests do not separate Arrange, Act, and Assert",
+      "description": "The service tests embed the method call inside assertThat/assertThatThrownBy and do not separate Arrange, Act, and Assert blocks. This makes Act singularity and assertion intent harder to audit.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+      "lineStart": 14,
+      "lineEnd": 28,
+      "evidence": "assertThat(greetingService.greet(...).message()) and assertThatThrownBy(() -> greetingService.greet(...)) combine Act and Assert.",
+      "suggestedFix": "Use explicit blocks: arrange input, act by invoking greetingService.greet(input) or capturing the throwing lambda, then assert the response or exception.",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-6",
+      "severity": "High",
+      "category": "Coverage Criteria",
+      "title": "Public exception handler path is untested",
+      "description": "GlobalExceptionHandler.handleInvalidParameter is a public @ExceptionHandler method, but existing JaCoCo output reports the method missed. This violates the all-public-methods-tested requirement.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "lineStart": 35,
+      "lineEnd": 37,
+      "evidence": "sample-java-code/target/site/jacoco/jacoco.csv reports GlobalExceptionHandler METHOD_MISSED=1 and LINE_MISSED=1; jacoco.xml marks line 37 missed.",
+      "suggestedFix": "Add a MockMvc test that triggers HandlerMethodValidationException, such as a query name longer than @Size(max = 40), and assert 400 plus the sanitized ErrorResponse.",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "test-quality-7",
+      "severity": "Medium",
+      "category": "Boundary Value Tests",
+      "title": "Size boundary validation is not tested",
+      "description": "GreetingController validates name with @Size(max = 40), but tests only cover normal and blank values. Boundary cases at exactly 40 characters and 41 characters are missing.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 31,
+      "lineEnd": 66,
+      "evidence": "Tests cover valid short names and blank names, but no test exercises @Size(max = 40) on query or body inputs.",
+      "suggestedFix": "Add parameterized tests for 40-character valid names and 41-character rejected names for both query and JSON body paths.",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-8",
+      "severity": "High",
+      "category": "Coverage Criteria",
+      "title": "Controller error-case tests are fewer than happy-path tests",
+      "description": "The review standard requires error case tests to be equal to or greater than happy paths. GreetingControllerTest has three happy-path tests and two error-path tests.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 24,
+      "lineEnd": 66,
+      "evidence": "Happy paths: healthReturnsUp, greetByQueryReturnsGreeting, greetByBodyReturnsGreeting. Error paths: greetByQueryRejectsBlankName, greetByBodyRejectsBlankName.",
+      "suggestedFix": "Add error cases for oversized names, missing body, malformed JSON, and missing query parameter until error coverage is at least equal to happy-path coverage.",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "resilience-1",
+      "severity": "Critical",
+      "category": "Health Checks",
+      "title": "Spring Boot Actuator liveness/readiness probes are missing",
+      "description": "The application exposes a custom `/api/health` endpoint, but it does not include `spring-boot-starter-actuator` and does not configure `/actuator/health` or `/actuator/health/readiness`. This does not satisfy the required liveness/readiness probe contract for orchestration and production-style operation.",
+      "targetFile": "sample-java-code/pom.xml",
+      "lineStart": 25,
+      "lineEnd": 39,
+      "evidence": "Dependencies include validation, web, and test only; there is no `spring-boot-starter-actuator`. `sample-java-code/src/main/resources/application.yml` lines 1-6 also contain only port and application name, with no `management.endpoint.health.probes.enabled` or health exposure settings.",
+      "suggestedFix": "Add `spring-boot-starter-actuator`, then configure `management.endpoints.web.exposure.include: health,info`, `management.endpoint.health.probes.enabled: true`, and enable liveness/readiness state health indicators in `application.yml`. Keep `/api/health` only as a smoke endpoint if still needed, but do not use it as the orchestrator probe contract.",
+      "sourceAgents": [
+        "resilience"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "resilience-2",
+      "severity": "High",
+      "category": "Graceful Shutdown",
+      "title": "Graceful shutdown is not configured",
+      "description": "The application configuration does not enable graceful shutdown or define a shutdown phase timeout. During deploys or restarts, in-flight requests may be terminated abruptly instead of being drained.",
+      "targetFile": "sample-java-code/src/main/resources/application.yml",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "evidence": "`application.yml` defines only `server.port` and `spring.application.name`; it has no `server.shutdown: graceful` or `spring.lifecycle.timeout-per-shutdown-phase` setting.",
+      "suggestedFix": "Add `server.shutdown: graceful` and a bounded `spring.lifecycle.timeout-per-shutdown-phase`, for example `20s`, to allow Spring Boot to finish in-flight requests during termination.",
+      "sourceAgents": [
+        "resilience"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "conflicts": [],
+  "adjudications": [],
+  "escalations": [
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "architecture"
+      ],
+      "description": "Confirm whether `sample-java-code` is intentionally exempt from the full package/security structure because `sample-java-code/AGENTS.md` describes it as a small validation project. If exempt, document the exception explicitly so architecture reviewers do not treat it as erosion.",
+      "recommendedDecisionMaker": "Repository maintainer or architecture owner"
+    },
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "api-endpoint"
+      ],
+      "description": "The root AGENTS.md references an AGENTS.md §5.1 URL migration table, but that table was not present in the supplied root instructions and no design reference files were provided. Exact SkiShop URL mapping compliance for /api/health and /api/greetings could not be verified beyond confirming there are no .do mappings.",
+      "recommendedDecisionMaker": "Project owner or API design owner"
+    },
+    {
+      "priority": "high",
+      "sourceAgents": [
+        "config-di"
+      ],
+      "description": "Confirm whether sample-java-code is intended to be a deliberately public, unauthenticated sample API. If yes, document that decision and still add Spring Security with explicit permitAll matchers and security headers; if no, define the authentication/authorization model before publishing.",
+      "recommendedDecisionMaker": "Project owner or security lead"
+    },
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "security"
+      ],
+      "description": "Decide whether /api/greetings is intentionally public and stateless, or whether it should require authentication under the project-wide default-deny policy. This affects the correct SecurityFilterChain and CSRF design.",
+      "recommendedDecisionMaker": "Project maintainer / application owner"
+    },
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "security"
+      ],
+      "description": "Define deployment assumptions for TLS termination and public exposure. HSTS and Secure session-cookie settings require knowing whether HTTPS is terminated in-app or at a reverse proxy.",
+      "recommendedDecisionMaker": "Infrastructure owner"
+    },
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "dependency"
+      ],
+      "description": "The required dependency list is module-role dependent. sample-java-code appears to be a minimal REST sample, so persistence, Thymeleaf, mail, Testcontainers, and PostgreSQL dependencies were treated as not applicable. If this directory is intended to represent the production backend, those dependencies should be reviewed as required.",
+      "recommendedDecisionMaker": "Repository maintainer or backend technical lead"
+    },
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "description": "Decide whether SampleJavaCodeApplication.main should be excluded from JaCoCo or covered by a context-load/application-start test. Existing JaCoCo output reports main as missed, but many teams intentionally exclude bootstrap classes.",
+      "recommendedDecisionMaker": "Project maintainer"
+    },
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "resilience"
+      ],
+      "description": "Confirm whether `sample-java-code` is intended to meet the same production-style operational readiness bar as the main application. If it is only a command-check fixture, the team may explicitly document reduced requirements; otherwise add Actuator probes and graceful shutdown now.",
+      "recommendedDecisionMaker": "Repository maintainer or service owner"
+    }
+  ],
+  "sdkExecution": {
+    "sdkPackage": "@openai/codex-sdk",
+    "concurrency": 7,
+    "sandboxMode": "read-only",
+    "approvalPolicy": "never",
+    "webSearchMode": "disabled",
+    "modelReasoningEffort": "high"
+  },
+  "outputFiles": {
+    "markdown": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-sample-java/sample-java-code/check-report-3.md",
+    "json": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-sample-java/sample-java-code/check-report-3.json",
+    "events": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-sample-java/sample-java-code/check-report-3.events.jsonl"
+  }
+}

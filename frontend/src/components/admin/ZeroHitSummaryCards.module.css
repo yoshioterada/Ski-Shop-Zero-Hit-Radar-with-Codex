@@ -1,0 +1,39 @@
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d7e6f0;
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgb(16 32 51 / 7%);
+}
+
+.card svg {
+  color: #0b6fb3;
+}
+
+.card span {
+  color: #546b7f;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.card strong {
+  min-width: 0;
+  color: #0e3557;
+  font-size: 27px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}

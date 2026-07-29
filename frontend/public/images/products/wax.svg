@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Ski wax</title>
+  <desc id="desc">Blocks of ski wax arranged for base preparation.</desc>
+  <rect width="640" height="480" fill="#edf6fb"/>
+  <rect x="156" y="164" width="176" height="186" rx="28" fill="#4f9ec2"/>
+  <rect x="286" y="126" width="188" height="220" rx="30" fill="#f4c15d"/>
+  <rect x="333" y="176" width="96" height="46" rx="23" fill="#ffffff" opacity=".7"/>
+  <path d="M193 260h99M193 292h67" stroke="#ffffff" stroke-width="18" stroke-linecap="round" opacity=".75"/>
+</svg>

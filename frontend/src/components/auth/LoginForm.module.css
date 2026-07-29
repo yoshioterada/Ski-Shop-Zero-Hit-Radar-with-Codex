@@ -1,0 +1,56 @@
+.form {
+  display: grid;
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field label {
+  color: #244860;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.inputWrap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #b8d5e7;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #42617c;
+  background: #ffffff;
+}
+
+.inputWrap:focus-within {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.inputWrap input {
+  min-height: 44px;
+  min-width: 0;
+  border: 0;
+  color: #102033;
+  background: transparent;
+  font: inherit;
+  outline: 0;
+}
+
+.inputWrap input:disabled {
+  cursor: not-allowed;
+}
+
+.error {
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #8a250f;
+  background: #fff0e9;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}

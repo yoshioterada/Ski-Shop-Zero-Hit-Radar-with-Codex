@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Ski bindings</title>
+  <desc id="desc">A pair of ski bindings mounted on a clean product display surface.</desc>
+  <rect width="640" height="480" fill="#e9f1f5"/>
+  <rect x="100" y="322" width="440" height="42" rx="21" fill="#cfe2eb"/>
+  <g fill="#102033">
+    <rect x="145" y="210" width="128" height="112" rx="20"/>
+    <rect x="367" y="210" width="128" height="112" rx="20"/>
+  </g>
+  <g fill="#f4c15d">
+    <rect x="174" y="178" width="70" height="70" rx="14"/>
+    <rect x="396" y="178" width="70" height="70" rx="14"/>
+  </g>
+  <g fill="#4f9ec2">
+    <rect x="188" y="247" width="42" height="76" rx="12"/>
+    <rect x="410" y="247" width="42" height="76" rx="12"/>
+  </g>
+</svg>

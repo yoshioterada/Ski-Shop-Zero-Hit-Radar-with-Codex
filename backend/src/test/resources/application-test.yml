@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:zero_hit_radar_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: false
+  ai:
+    openai:
+      api-key:
+      chat:
+        options:
+          model: test-model
+
+app:
+  cors:
+    allowed-origins: http://localhost:3000
+  admin:
+    username: test-admin@example.com
+    password: "{noop}test-password"
+    token-ttl: PT1H
+  ai:
+    api-key:
+    model: test-model

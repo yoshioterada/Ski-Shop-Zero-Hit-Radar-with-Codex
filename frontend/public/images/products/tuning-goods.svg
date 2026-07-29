@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Ski tuning tools</title>
+  <desc id="desc">Edge tuning tools and brush for maintaining ski bases.</desc>
+  <rect width="640" height="480" fill="#edf5f8"/>
+  <g transform="translate(132 134)">
+    <rect x="42" y="126" width="260" height="70" rx="20" fill="#102033"/>
+    <rect x="72" y="148" width="70" height="26" rx="13" fill="#4f9ec2"/>
+    <rect x="258" y="28" width="74" height="212" rx="22" fill="#d94f37"/>
+    <path d="M332 86l66 66-52 52-66-66z" fill="#f4c15d"/>
+    <path d="M36 84h210" stroke="#0e6f94" stroke-width="28" stroke-linecap="round"/>
+    <path d="M72 50v68M112 50v68M152 50v68M192 50v68" stroke="#102033" stroke-width="12" stroke-linecap="round"/>
+  </g>
+</svg>

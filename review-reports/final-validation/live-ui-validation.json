@@ -1,0 +1,29 @@
+{
+  "keyword": "live-ui-zero-hit-1780585146255",
+  "results": [
+    {
+      "name": "desktop:zeroHitVisible",
+      "value": true
+    },
+    {
+      "name": "desktop:productsHeading",
+      "value": true
+    },
+    {
+      "name": "mobile:zeroHitVisible",
+      "value": true
+    },
+    {
+      "name": "mobile:productsHeading",
+      "value": true
+    },
+    {
+      "name": "admin:dashboardHeading",
+      "value": true
+    },
+    {
+      "name": "admin:keywordVisible",
+      "value": true
+    }
+  ]
+}

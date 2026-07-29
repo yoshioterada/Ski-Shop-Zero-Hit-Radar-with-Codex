@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Ski gloves</title>
+  <desc id="desc">Insulated ski gloves with reinforced palms.</desc>
+  <rect width="640" height="480" fill="#ecf5f9"/>
+  <g transform="translate(160 95)">
+    <path d="M110 72c0-23 18-41 41-41s41 18 41 41v76h7V52c0-22 18-40 40-40s40 18 40 40v102l16-43c8-21 31-31 52-23s31 31 23 52l-38 102c-22 59-59 96-129 96h-41c-45 0-82-37-82-82V72z" fill="#17344d"/>
+    <path d="M80 220h212v62c0 19-15 34-34 34H114c-19 0-34-15-34-34z" fill="#d94f37"/>
+    <path d="M117 224h174" stroke="#f4c15d" stroke-width="16" stroke-linecap="round"/>
+  </g>
+</svg>

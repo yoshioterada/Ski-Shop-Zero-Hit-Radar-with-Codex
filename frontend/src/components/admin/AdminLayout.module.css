@@ -1,0 +1,79 @@
+.adminShell {
+  display: grid;
+  align-items: start;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 22px;
+}
+
+.sidebar,
+.content {
+  min-width: 0;
+}
+
+.sidebar {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 20px;
+  border: 1px solid #d7e6f0;
+  border-radius: 8px;
+  padding: 18px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #0e3557, #0b6fb3);
+  box-shadow: 0 14px 34px rgb(16 32 51 / 12%);
+}
+
+.sidebarBrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.sideNav {
+  display: grid;
+  gap: 8px;
+}
+
+.sideNav span {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: rgb(255 255 255 / 78%);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.sideNavActive {
+  color: #0e3557 !important;
+  background: #ffffff;
+}
+
+.content {
+  display: grid;
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .adminShell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  .sideNav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .sideNav {
+    grid-template-columns: 1fr;
+  }
+}

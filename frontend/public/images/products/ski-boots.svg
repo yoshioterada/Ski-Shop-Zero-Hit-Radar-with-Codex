@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Alpine ski boots</title>
+  <desc id="desc">Performance ski boots with buckle details on a mountain-snow backdrop.</desc>
+  <rect width="640" height="480" fill="#edf6fb"/>
+  <path d="M0 356c95-32 185-38 277-13s182 23 363-42v179H0z" fill="#ffffff"/>
+  <g transform="translate(190 128)">
+    <path d="M78 54h98l39 126 84 35c26 11 41 31 41 55v24H92c-36 0-64-29-61-65z" fill="#16324a"/>
+    <path d="M102 82h85l22 73H84z" fill="#2f82a9"/>
+    <path d="M80 223h270v43H74z" fill="#0f2438"/>
+    <rect x="93" y="112" width="104" height="14" rx="7" fill="#f4c15d"/>
+    <rect x="101" y="148" width="118" height="14" rx="7" fill="#f4c15d"/>
+    <rect x="128" y="188" width="114" height="14" rx="7" fill="#f4c15d"/>
+  </g>
+</svg>

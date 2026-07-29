@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Snow goggles</title>
+  <desc id="desc">Wide ski goggles with an amber lens on a cool snow backdrop.</desc>
+  <rect width="640" height="480" fill="#eaf4f8"/>
+  <path d="M122 216c32-48 91-76 166-76h64c75 0 134 28 166 76l28 42-48 70H142l-48-70z" fill="#102033"/>
+  <path d="M158 226c25-35 74-54 135-54h54c61 0 110 19 135 54l18 27-31 43H151l-31-43z" fill="#f0a84a"/>
+  <path d="M190 196c71 54 144 73 250 72" fill="none" stroke="#ffd995" stroke-width="18" stroke-linecap="round" opacity=".7"/>
+</svg>

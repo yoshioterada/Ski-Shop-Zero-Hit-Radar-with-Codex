@@ -1,0 +1,153 @@
+.pageHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin-bottom: 8px;
+  color: #0b6fb3;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.pageHeader h1 {
+  color: #0e3557;
+  font-size: 38px;
+  line-height: 1.15;
+}
+
+.count {
+  flex: 0 0 auto;
+  color: #42617c;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.toolbar {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 24px;
+  border: 1px solid #d7e6f0;
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgb(16 32 51 / 7%);
+}
+
+.filterRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.categoryGroup {
+  min-width: 0;
+  border: 0;
+}
+
+.categoryGroup legend,
+.sortLabel span {
+  margin-bottom: 8px;
+  color: #244860;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.categoryChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.categoryChip,
+.categoryChipActive {
+  min-height: 38px;
+  border: 1px solid #b8d5e7;
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #304d69;
+  background: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.categoryChipActive {
+  color: #ffffff;
+  border-color: #0b6fb3;
+  background: #0b6fb3;
+}
+
+.categoryChip:disabled,
+.categoryChipActive:disabled,
+.sortLabel select:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.categoryChip:focus-visible,
+.categoryChipActive:focus-visible,
+.sortLabel select:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.sortLabel {
+  display: grid;
+  min-width: 220px;
+}
+
+.sortLabel select {
+  min-height: 42px;
+  border: 1px solid #b8d5e7;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #102033;
+  background: #ffffff;
+  font: inherit;
+  font-weight: 700;
+}
+
+.results {
+  min-height: 320px;
+}
+
+@media (max-width: 760px) {
+  .pageHeader,
+  .filterRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sortLabel {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .pageHeader h1 {
+    font-size: 31px;
+  }
+
+  .toolbar {
+    padding: 14px;
+  }
+
+  .categoryChips {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .categoryChip,
+  .categoryChipActive {
+    width: 100%;
+  }
+}

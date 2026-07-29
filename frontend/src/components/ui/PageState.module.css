@@ -1,0 +1,45 @@
+.state {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 14px;
+  border: 1px solid #d9e7f1;
+  border-radius: 8px;
+  padding: 20px;
+  color: #244860;
+  background: #ffffff;
+}
+
+.state svg {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  color: #0b6fb3;
+}
+
+.state h2 {
+  color: #0e3557;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.state p {
+  margin-top: 6px;
+  color: #546b7f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.retryButton {
+  margin-top: 14px;
+}
+
+.loadingIcon {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

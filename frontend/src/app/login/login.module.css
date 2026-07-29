@@ -1,0 +1,67 @@
+.loginShell {
+  display: grid;
+  width: min(100%, 900px);
+  min-height: 62vh;
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  overflow: hidden;
+  margin: 28px auto 0;
+  border: 1px solid #d7e6f0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 46px rgb(16 32 51 / 14%);
+}
+
+.brandPanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  padding: 42px;
+  color: #ffffff;
+  background:
+    linear-gradient(145deg, rgb(8 56 97 / 92%), rgb(12 112 177 / 82%)),
+    #0b6fb3;
+}
+
+.brandPanel h1 {
+  font-size: 34px;
+  line-height: 1.2;
+}
+
+.brandPanel p {
+  color: rgb(255 255 255 / 86%);
+  line-height: 1.7;
+}
+
+.eyebrow {
+  color: #92d9ff;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.formPanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 42px;
+}
+
+@media (max-width: 760px) {
+  .loginShell {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .brandPanel,
+  .formPanel {
+    padding: 26px;
+  }
+
+  .brandPanel h1 {
+    font-size: 28px;
+  }
+}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Ski poles</title>
+  <desc id="desc">Two lightweight ski poles with baskets and ergonomic grips.</desc>
+  <rect width="640" height="480" fill="#eaf4f8"/>
+  <g stroke-linecap="round">
+    <path d="M235 92l85 326" stroke="#102033" stroke-width="14"/>
+    <path d="M405 92L320 418" stroke="#0e6f94" stroke-width="14"/>
+    <path d="M211 85h64" stroke="#d94f37" stroke-width="34"/>
+    <path d="M373 85h64" stroke="#f4c15d" stroke-width="34"/>
+    <path d="M282 388h80" stroke="#102033" stroke-width="14"/>
+    <path d="M254 414h80" stroke="#0e6f94" stroke-width="14"/>
+  </g>
+</svg>

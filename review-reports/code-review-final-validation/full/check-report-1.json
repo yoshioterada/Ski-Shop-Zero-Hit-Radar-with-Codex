@@ -1,0 +1,441 @@
+{
+  "target": {
+    "rawTarget": "full",
+    "targetKind": "full",
+    "targetName": "full",
+    "repoRoot": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/sample-java-code",
+    "files": [
+      "pom.xml",
+      "src/main/java/com/codexskishop/sample/api/ErrorResponse.java",
+      "src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "src/main/java/com/codexskishop/sample/api/GreetingController.java",
+      "src/main/java/com/codexskishop/sample/api/GreetingRequest.java",
+      "src/main/java/com/codexskishop/sample/api/GreetingResponse.java",
+      "src/main/java/com/codexskishop/sample/api/HealthResponse.java",
+      "src/main/java/com/codexskishop/sample/SampleJavaCodeApplication.java",
+      "src/main/java/com/codexskishop/sample/service/GreetingService.java",
+      "src/main/resources/application.yml",
+      "src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java"
+    ],
+    "standardsFiles": [
+      "AGENTS.md"
+    ],
+    "designReferenceFiles": []
+  },
+  "verdict": "Conditional Approval",
+  "reviewDate": "2026-06-04T15:02:13.268Z",
+  "agents": [
+    "security",
+    "performance",
+    "test-quality"
+  ],
+  "results": [
+    {
+      "agentId": "security",
+      "threadId": "019e9326-e7a7-76a3-9d16-04b72e02c30a",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Static security review found no injection, hardcoded secret, SSRF, Struts legacy, or unsafe deserialization markers in the target code. The main gaps are missing Spring Security baseline controls, missing rate limiting/request limits, and incomplete explicit error hardening.",
+      "findings": [
+        {
+          "id": "security-1",
+          "severity": "High",
+          "category": "A01/A05/A07/A09 - Security Baseline",
+          "title": "No Spring Security baseline, default-deny policy, CSRF configuration, or security headers",
+          "description": "The application exposes web endpoints without Spring Security in the dependency set and no SecurityFilterChain is present. Even if /api/health and /api/greetings are intentionally public, the code lacks an explicit allowlist/default-deny posture and does not configure standard security headers such as CSP, X-Frame-Options, X-Content-Type-Options, HSTS, Referrer-Policy, or Permissions-Policy. CSRF/session hardening is also absent because Spring Security is not enabled.",
+          "targetFile": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/sample-java-code/pom.xml",
+          "lineStart": 25,
+          "lineEnd": 39,
+          "evidence": "pom.xml declares validation, web, and test starters only. Repository search found no spring-boot-starter-security, SecurityFilterChain, csrf, contentSecurityPolicy, frameOptions, or httpStrictTransportSecurity configuration.",
+          "suggestedFix": "Add spring-boot-starter-security and define a SecurityFilterChain that explicitly permits intended public endpoints, applies anyRequest().authenticated() as fallback, enables CSRF where browser state-changing flows exist, and configures security headers. If this API is intentionally fully public, document that decision and still configure headers.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "security-2",
+          "severity": "High",
+          "category": "D - Denial of Service / Rate Limiting",
+          "title": "Public endpoints lack rate limiting and request resource limits",
+          "description": "The public GET and POST endpoints have validation on the logical name field, but the application does not configure rate limiting, request body limits for JSON, connection/keep-alive timeouts, or related Tomcat safeguards. An attacker can flood /api/greetings or send oversized/slow requests before Bean Validation meaningfully protects business input.",
+          "targetFile": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/sample-java-code/src/main/resources/application.yml",
+          "lineStart": 1,
+          "lineEnd": 6,
+          "evidence": "application.yml only sets server.port and spring.application.name. Repository search found no rate limiting filter/library and no server.tomcat, multipart, connection timeout, or request size limit configuration.",
+          "suggestedFix": "Add bounded server settings such as connection timeout, keep-alive timeout, max swallow/request size appropriate to the deployment, and implement per-IP or per-principal rate limiting for public endpoints. Keep validation limits on DTO fields as a second layer.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "security-3",
+          "severity": "Medium",
+          "category": "I - Information Disclosure / Error Handling",
+          "title": "Only validation exceptions are sanitized explicitly; generic error hardening is not configured",
+          "description": "GlobalExceptionHandler sanitizes validation errors, but it does not explicitly handle malformed JSON or unexpected exceptions, and application.yml does not explicitly disable stack traces/messages in error responses. Spring Boot defaults are generally conservative, so this is a hardening gap rather than confirmed leakage, but production security should not rely on implicit defaults.",
+          "targetFile": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+          "lineStart": 24,
+          "lineEnd": 55,
+          "evidence": "Handlers exist for MethodArgumentNotValidException, HandlerMethodValidationException, and ConstraintViolationException only. application.yml has no server.error.include-stacktrace or server.error.include-message settings.",
+          "suggestedFix": "Add explicit production-safe settings: server.error.include-stacktrace=never and server.error.include-message=never. Add sanitized handlers for HttpMessageNotReadableException and a final fallback Exception handler that returns a generic response while logging only non-sensitive operational details.",
+          "sourceAgents": [
+            "security"
+          ],
+          "confidence": "medium"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "security"
+          ],
+          "description": "Confirm whether /api/health and /api/greetings are intentionally public for this sample project. If yes, encode that as explicit permitAll rules and document the rationale; if no, require authentication by default.",
+          "recommendedDecisionMaker": "Product owner or security owner"
+        }
+      ],
+      "designDeviations": [],
+      "score": 42,
+      "usage": {
+        "inputTokens": 146420,
+        "cachedInputTokens": 112128,
+        "outputTokens": 6448,
+        "reasoningOutputTokens": 2401
+      },
+      "rawMarkdown": "# Source Code Review Report: Security Review\n\n## Summary\n- **Review Target**: full sample-java-code Spring Boot API\n- **Verdict**: ❌ Fail\n- **Finding Count**: Critical: 0 / High: 2 / Medium: 1 / Low: 0\n- **Method**: Static source review only. No files were modified.\n\n## Phase A: Implementation Compliance Check\n\n| OWASP Area | Result |\n|---|---|\n| A01 Broken Access Control | ⚠️ No Spring Security/default-deny baseline found. Current endpoints may be intentionally public, but this is not explicit. |\n| A02 Cryptographic Failures | ✅ No hardcoded secrets or password hashing code found. |\n| A03 Injection | ✅ No SQL/JdbcTemplate/native query/command execution patterns found. |\n| A07 XSS | ⚠️ No template XSS sink found, but CSP and nosniff headers are not configured. |\n| A08 Mass Assignment | ✅ Request body uses GreetingRequest DTO, not entity binding. |\n| A10 SSRF | ✅ No RestTemplate/WebClient/user-input URL fetch found. |\n\n## Security Header Check\n\n| Header | Expected | Actual | Verdict |\n|---|---|---|---|\n| X-Content-Type-Options | nosniff | Not configured | ❌ |\n| X-Frame-Options | DENY | Not configured | ❌ |\n| Content-Security-Policy | default-src 'self' | Not configured | ❌ |\n| Strict-Transport-Security | enabled in HTTPS deployment | Not configured | ❌ |\n| Referrer-Policy | strict-origin-when-cross-origin | Not configured | ❌ |\n| Permissions-Policy | camera=(), microphone=(), geolocation=() | Not configured | ❌ |\n\n## Phase B: STRIDE Attack Resistance Summary\n\n| STRIDE Category | Assessment | Highest Risk |\n|---|---|---|\n| Spoofing | No auth/session surface in current code, but no security baseline exists for future endpoints. | High |\n| Tampering | Greeting input is validated and no business-critical mutable state exists. | Low |\n| Repudiation | No security/audit events exist; current app has no admin/payment actions. | Low |\n| Information Disclosure | Validation errors are sanitized, but generic error behavior is not explicitly hardened. | Medium |\n| Denial of Service | No rate limiting, request size, or connection timeout hardening found. | High |\n| Elevation of Privilege | No roles/admin endpoints exist, but no default-deny/method security baseline exists. | High |\n\n## Business Logic Attack Resistance\n\nNo EC checkout, price, inventory, coupon, payment, point, cart, or order flow exists in this sample target. Business-logic attack scenarios are not applicable to the current code.\n\n## Consolidated Findings\n\n| # | Severity | Category | Target | Finding |\n|---|---|---|---|---|\n| 1 | High | Security baseline | pom.xml:25 | No Spring Security dependency/configuration, default deny, CSRF, or security headers. |\n| 2 | High | DoS | application.yml:1 | No rate limiting, request size, or connection timeout limits. |\n| 3 | Medium | Information disclosure | GlobalExceptionHandler.java:24 | Only validation exceptions are explicitly sanitized; generic error hardening is implicit/incomplete. |\n\n## Scorecard\n\n| Evaluation Item | Score |\n|---|---:|\n| Injection Prevention | 5/5 |\n| Authentication/Authorization | 2/5 |\n| Secret Management | 5/5 |\n| Security Headers | 1/5 |\n| CSRF Protection | 2/5 |\n| Rate Limiting / DoS Defense | 1/5 |\n| Spoofing Attack Resistance | 2/5 |\n| Tampering Attack Resistance | 4/5 |\n| Information Disclosure Resistance | 3/5 |\n| Privilege Escalation Resistance | 3/5 |\n| Business Logic Attack Resistance | 4/5 |\n| Session Management Security | 1/5 |\n| Struts Legacy Pattern Safety | 5/5 |\n| **Total Score** | **42/65** |\n\n## Escalation Items\n\nConfirm whether all current endpoints are intentionally public. If they are public, configure explicit permitAll rules plus security headers; if not, add authentication and default-deny authorization.",
+      "startedAt": "2026-06-04T15:01:00.882Z",
+      "completedAt": "2026-06-04T15:02:13.266Z",
+      "durationMs": 72384
+    },
+    {
+      "agentId": "performance",
+      "threadId": "019e9326-e7ba-78a0-a40e-6b575e4c682c",
+      "status": "completed",
+      "verdict": "pass",
+      "summary": "No performance findings in the reviewed target. The sample API has no JPA, repository, collection-returning endpoint, in-memory database filtering, query-in-loop pattern, or unbounded list response.",
+      "findings": [],
+      "escalations": [],
+      "designDeviations": [],
+      "score": 100,
+      "usage": {
+        "inputTokens": 80619,
+        "cachedInputTokens": 55808,
+        "outputTokens": 2752,
+        "reasoningOutputTokens": 704
+      },
+      "rawMarkdown": "# Source Code Review Report: Performance Review\n\n## Summary\n- **Review Target**: full sample Java Spring Boot target files\n- **Verdict**: ✅ Pass\n- **Finding Count**: Critical: 0 / High: 0 / Medium: 0 / Low: 0\n\n## N+1 Query Detection Results\n| # | File | Method | Line | Pattern | Fix Suggestion |\n|---|------|--------|------|---------|----------------|\n| - | - | - | - | No JPA entities, repositories, or lazy associations in target files | - |\n\n## Pagination Check\n| Endpoint | Pagination Present | Default Size | Max Size | Verdict |\n|----------|-------------------|-------------|----------|---------|\n| `GET /api/health` | N/A | N/A | N/A | Pass |\n| `GET /api/greetings` | N/A, single response | N/A | N/A | Pass |\n| `POST /api/greetings` | N/A, single response | N/A | N/A | Pass |\n\n## JPA Query Optimization Check\n| File | Method | readOnly Txn | DTO Projection | exists vs count | Verdict |\n|------|--------|-------------|----------------|-----------------|---------|\n| `src/main/java/com/codexskishop/sample/api/GreetingController.java` | `health`, `greetByQuery`, `greetByBody` | N/A, no persistence | N/A | N/A | Pass |\n| `src/main/java/com/codexskishop/sample/service/GreetingService.java` | `greet` | N/A, no persistence | N/A | N/A | Pass |\n\n## Findings\n| # | Severity | Category | Target File | Line | Finding | Fix Code Example |\n|---|----------|----------|-------------|------|---------|-----------------|\n| - | - | - | - | - | No performance defects found | - |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|-----------------|-------------|-------|\n| N+1 Query Prevention | 5/5 | No database access or JPA associations exist in the reviewed target. |\n| JPA Query Optimization | 5/5 | No Spring Data/JPA query paths exist. |\n| Pagination | 5/5 | No collection-returning endpoints exist. |\n| Memory Efficiency | 5/5 | DTOs are Java records and no loop concatenation, redundant collection, or hot-path boxing pattern was found. |\n| Cache Strategy | 5/5 | No frequent read query or mutable master-data read path exists, so cache is not applicable. |\n| **Overall Score** | **25/25** | Performance review passes for the current sample scope. |\n\n## Escalation Items (Requires Human Judgment)\nNone.\n\n## Notes\n- `docs/agents/java/AGENTS.md` was referenced by local instructions but is not present under the reviewed workspace root, so this review used the supplied AGENTS instructions and the visible target files only.\n- Tests were not executed because the task requested source review only and the current filesystem sandbox is read-only.",
+      "startedAt": "2026-06-04T15:01:00.883Z",
+      "completedAt": "2026-06-04T15:01:31.296Z",
+      "durationMs": 30413
+    },
+    {
+      "agentId": "test-quality",
+      "threadId": "019e9326-e7bc-7530-9831-ec9131d734a3",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Test quality review failed due to strict naming convention violations, unclear AAA structure, insufficient controller error/boundary coverage, and untested public methods shown in the existing JaCoCo report.",
+      "findings": [
+        {
+          "id": "test-quality-1",
+          "severity": "High",
+          "category": "Test Naming Convention",
+          "title": "All test methods violate should_ExpectedResult_when_Condition naming",
+          "description": "The review standard requires camelCase test names in the should_ExpectedResult_when_Condition form. Current names describe behavior, but none use the required specification-style pattern.",
+          "targetFile": "src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+          "lineStart": 13,
+          "lineEnd": 26,
+          "evidence": "Violating methods include greetNormalizesRepeatedWhitespace, greetRejectsBlankName, greetRejectsNullName. Controller tests also violate the same pattern at GreetingControllerTest.java lines 25, 32, 39, 50, and 58.",
+          "suggestedFix": "Rename methods, for example should_returnGreeting_when_nameContainsRepeatedWhitespace(), should_throwIllegalArgumentException_when_nameIsBlank(), should_returnHealthStatus_when_healthEndpointRequested().",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-2",
+          "severity": "High",
+          "category": "AAA Pattern",
+          "title": "Tests do not clearly separate Arrange, Act, and Assert blocks",
+          "description": "Most tests combine the action and assertion in one expression, and controller tests start directly with mockMvc.perform(...).andExpect(...). The required AAA structure is not visible, and Act is not isolated as a single call/result.",
+          "targetFile": "src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 24,
+          "lineEnd": 66,
+          "evidence": "Example: lines 26-28 perform GET /api/health and assert the response in a single chain. GreetingServiceTest lines 14-15 and 20-22 similarly combine Act and Assert.",
+          "suggestedFix": "Use explicit Arrange / Act / Assert sections. For MockMvc tests, assign ResultActions result = mockMvc.perform(...); then assert with result.andExpect(...).",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-3",
+          "severity": "Medium",
+          "category": "Display Names",
+          "title": "Tests do not provide @DisplayName descriptions",
+          "description": "The review standard expects @DisplayName for human-readable test descriptions. None of the eight test methods use @DisplayName, making reports less readable even if method names are improved.",
+          "targetFile": "src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 24,
+          "lineEnd": 58,
+          "evidence": "The test methods are annotated only with @Test. GreetingServiceTest has the same issue at lines 12, 18, and 25.",
+          "suggestedFix": "Add @DisplayName annotations such as @DisplayName(\"Returns greeting when query name is valid\") above each test.",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-4",
+          "severity": "High",
+          "category": "Coverage Criteria",
+          "title": "Public methods remain untested in the JaCoCo report",
+          "description": "The existing JaCoCo report shows missed public methods, which violates the agent rule that all public methods must be tested.",
+          "targetFile": "src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+          "lineStart": 36,
+          "lineEnd": 37,
+          "evidence": "target/site/jacoco/jacoco.csv reports GlobalExceptionHandler with METHOD_MISSED=1 and LINE_MISSED=1; jacoco.xml shows handleInvalidParameter at line 37 missed. SampleJavaCodeApplication.main at line 18 is also missed.",
+          "suggestedFix": "Add a MockMvc test that triggers HandlerMethodValidationException, for example an over-40-character query parameter. Add a Spring context smoke test for the application bootstrap, or explicitly exclude the bootstrap main class from coverage if that is the project policy.",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-5",
+          "severity": "High",
+          "category": "Error Case Coverage",
+          "title": "Controller error tests are fewer than happy-path tests and miss key validation boundaries",
+          "description": "The controller suite has three happy-path tests and two error-path tests. It also does not cover missing name, empty JSON, malformed JSON, exact max length 40, or over max length 40 for the @Size(max = 40) validation path.",
+          "targetFile": "src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 24,
+          "lineEnd": 66,
+          "evidence": "Happy paths: healthReturnsUp, greetByQueryReturnsGreeting, greetByBodyReturnsGreeting. Error paths: greetByQueryRejectsBlankName, greetByBodyRejectsBlankName. Production validation includes @NotBlank and @Size(max = 40) at GreetingController.java lines 46-58 and GreetingRequest.java lines 9-12.",
+          "suggestedFix": "Add parameterized validation tests for blank, missing, and overlong names for both query and body. Add boundary tests for 40-character names accepted and 41-character names rejected.",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "test-quality-6",
+          "severity": "Medium",
+          "category": "Parameterized Tests",
+          "title": "Repeated invalid-name cases are not modeled as parameterized tests",
+          "description": "The suite tests blank and null service inputs as separate methods and does not cover additional invalid variants. Parameterized tests would reduce duplication and make boundary coverage explicit.",
+          "targetFile": "src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+          "lineStart": 18,
+          "lineEnd": 29,
+          "evidence": "greetRejectsBlankName and greetRejectsNullName repeat the same assertion shape without @ParameterizedTest/@NullSource/@ValueSource.",
+          "suggestedFix": "Use @ParameterizedTest with @NullSource and @ValueSource(strings = {\"\", \" \", \"\\t\"}) for invalid names.",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "confidence": "high"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "test-quality"
+          ],
+          "description": "The workspace is read-only, so I did not rerun Maven. Findings use source inspection plus the existing target/surefire-reports and target/site/jacoco reports.",
+          "recommendedDecisionMaker": "Repository maintainer"
+        }
+      ],
+      "designDeviations": [],
+      "score": 14,
+      "usage": {
+        "inputTokens": 153990,
+        "cachedInputTokens": 121856,
+        "outputTokens": 6288,
+        "reasoningOutputTokens": 1860
+      },
+      "rawMarkdown": "# Source Code Review Report: Test Quality Review\n\n## Summary\n- **Review Target**: sample-java-code full test suite\n- **Verdict**: ❌ Fail\n- **Finding Count**: Critical: 0 / High: 4 / Medium: 2 / Low: 0\n- **Verification Note**: Maven was not rerun because the workspace is read-only. Existing Surefire and JaCoCo reports under `target/` were inspected.\n\n## Test Naming Check\n| File | Violating Method | Current Name | Recommended Name |\n|------|------------------|--------------|------------------|\n| `GreetingServiceTest.java:13` | yes | `greetNormalizesRepeatedWhitespace` | `should_returnGreeting_when_nameContainsRepeatedWhitespace` |\n| `GreetingServiceTest.java:19` | yes | `greetRejectsBlankName` | `should_throwIllegalArgumentException_when_nameIsBlank` |\n| `GreetingServiceTest.java:26` | yes | `greetRejectsNullName` | `should_throwIllegalArgumentException_when_nameIsNull` |\n| `GreetingControllerTest.java:25` | yes | `healthReturnsUp` | `should_returnUpStatus_when_healthEndpointRequested` |\n| `GreetingControllerTest.java:32` | yes | `greetByQueryReturnsGreeting` | `should_returnGreeting_when_queryNameIsValid` |\n| `GreetingControllerTest.java:39` | yes | `greetByBodyReturnsGreeting` | `should_returnGreeting_when_bodyNameIsValid` |\n| `GreetingControllerTest.java:50` | yes | `greetByQueryRejectsBlankName` | `should_returnBadRequest_when_queryNameIsBlank` |\n| `GreetingControllerTest.java:58` | yes | `greetByBodyRejectsBlankName` | `should_returnBadRequest_when_bodyNameIsBlank` |\n\n## AAA Pattern Check\n| File | Method | Arrange Clear | Act Single | Assert Clear | Verdict |\n|------|--------|---------------|------------|--------------|---------|\n| `GreetingServiceTest.java` | all 3 tests | No | No | Partial | Fail |\n| `GreetingControllerTest.java` | all 5 tests | No | No | Partial | Fail |\n\n## Test Type Coverage\n| Test Type | Exists | Framework | Target Layer | Verdict |\n|-----------|--------|-----------|--------------|---------|\n| Unit Test | Yes | JUnit 5 + AssertJ | `GreetingService` | Warning: naming/AAA issues |\n| API Integration/Slice | Yes | `@WebMvcTest` + `MockMvc` | `GreetingController` | Warning: error/boundary gaps |\n| DB Slice Test | N/A | None | No repository in target | N/A |\n| Security Test | N/A | None | No security layer in target | N/A |\n| E2E Test | No | None | Browser journey | Not required for this Java API sample |\n\n## Coverage Verification\n| Layer | Target | Estimated Achievement | Untested Method Count | Verdict |\n|-------|--------|----------------------|-----------------------|---------|\n| Service | Branch 80%+ | 100% branch, 100% line from JaCoCo | 0 | Pass |\n| Controller/API | 80%+ | API package 16/17 lines; `GlobalExceptionHandler` has 1 missed method | 1 | Fail |\n| Repository | 70%+ | N/A | 0 | N/A |\n| Overall | 80%+ | 25/28 lines, 4/4 branches from JaCoCo | 2 methods missed | Warning |\n\n## Findings\n| # | Severity | Category | Target File | Line | Finding | Fix Code Example |\n|---|----------|----------|-------------|------|---------|------------------|\n| 1 | High | Test Naming | `GreetingServiceTest.java` / `GreetingControllerTest.java` | 13,19,26,25,32,39,50,58 | All tests violate `should_ExpectedResult_when_Condition`. | `void should_returnGreeting_when_queryNameIsValid()` |\n| 2 | High | AAA Pattern | `GreetingControllerTest.java` | 24-66 | Act and Assert are combined in chained calls; Arrange/Act/Assert boundaries are not clear. | `ResultActions result = mockMvc.perform(...); result.andExpect(...);` |\n| 3 | Medium | DisplayName | test files | multiple | No tests use `@DisplayName`. | `@DisplayName(\"Returns greeting when query name is valid\")` |\n| 4 | High | Coverage | `GlobalExceptionHandler.java` | 36-37 | `handleInvalidParameter` is public but uncovered in JaCoCo. | Add overlong query parameter test to trigger method validation. |\n| 5 | High | Error Cases | `GreetingControllerTest.java` | 24-66 | Error tests are fewer than happy paths and miss missing/overlong/boundary values. | Add parameterized validation tests for query/body names. |\n| 6 | Medium | Parameterized Tests | `GreetingServiceTest.java` | 18-29 | Similar invalid-name tests are duplicated instead of parameterized. | Use `@ParameterizedTest`, `@NullSource`, and `@ValueSource`. |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|-----------------|-------------|-------|\n| Test Naming Convention | 1/5 | Every test method violates required pattern. |\n| AAA Pattern | 2/5 | Tests are concise but Act/Assert boundaries are not explicit. |\n| Test Type Coverage | 3/5 | Unit and WebMvc tests exist; no DB/security layer applies. |\n| Coverage Criteria | 3/5 | Overall and service coverage are good, but public methods remain uncovered. |\n| Mock Quality | 5/5 | No problematic mocking found. |\n| **Overall Score** | **14/25** | Fail due High findings. |\n\n## Escalation Items (Requires Human Judgment)\n- Decide whether `SampleJavaCodeApplication.main` should be tested with a smoke test or excluded from coverage by policy.\n",
+      "startedAt": "2026-06-04T15:01:00.883Z",
+      "completedAt": "2026-06-04T15:02:07.088Z",
+      "durationMs": 66205
+    }
+  ],
+  "findings": [
+    {
+      "id": "security-1",
+      "severity": "High",
+      "category": "A01/A05/A07/A09 - Security Baseline",
+      "title": "No Spring Security baseline, default-deny policy, CSRF configuration, or security headers",
+      "description": "The application exposes web endpoints without Spring Security in the dependency set and no SecurityFilterChain is present. Even if /api/health and /api/greetings are intentionally public, the code lacks an explicit allowlist/default-deny posture and does not configure standard security headers such as CSP, X-Frame-Options, X-Content-Type-Options, HSTS, Referrer-Policy, or Permissions-Policy. CSRF/session hardening is also absent because Spring Security is not enabled.",
+      "targetFile": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/sample-java-code/pom.xml",
+      "lineStart": 25,
+      "lineEnd": 39,
+      "evidence": "pom.xml declares validation, web, and test starters only. Repository search found no spring-boot-starter-security, SecurityFilterChain, csrf, contentSecurityPolicy, frameOptions, or httpStrictTransportSecurity configuration.",
+      "suggestedFix": "Add spring-boot-starter-security and define a SecurityFilterChain that explicitly permits intended public endpoints, applies anyRequest().authenticated() as fallback, enables CSRF where browser state-changing flows exist, and configures security headers. If this API is intentionally fully public, document that decision and still configure headers.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "security-2",
+      "severity": "High",
+      "category": "D - Denial of Service / Rate Limiting",
+      "title": "Public endpoints lack rate limiting and request resource limits",
+      "description": "The public GET and POST endpoints have validation on the logical name field, but the application does not configure rate limiting, request body limits for JSON, connection/keep-alive timeouts, or related Tomcat safeguards. An attacker can flood /api/greetings or send oversized/slow requests before Bean Validation meaningfully protects business input.",
+      "targetFile": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/sample-java-code/src/main/resources/application.yml",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "evidence": "application.yml only sets server.port and spring.application.name. Repository search found no rate limiting filter/library and no server.tomcat, multipart, connection timeout, or request size limit configuration.",
+      "suggestedFix": "Add bounded server settings such as connection timeout, keep-alive timeout, max swallow/request size appropriate to the deployment, and implement per-IP or per-principal rate limiting for public endpoints. Keep validation limits on DTO fields as a second layer.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "security-3",
+      "severity": "Medium",
+      "category": "I - Information Disclosure / Error Handling",
+      "title": "Only validation exceptions are sanitized explicitly; generic error hardening is not configured",
+      "description": "GlobalExceptionHandler sanitizes validation errors, but it does not explicitly handle malformed JSON or unexpected exceptions, and application.yml does not explicitly disable stack traces/messages in error responses. Spring Boot defaults are generally conservative, so this is a hardening gap rather than confirmed leakage, but production security should not rely on implicit defaults.",
+      "targetFile": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "lineStart": 24,
+      "lineEnd": 55,
+      "evidence": "Handlers exist for MethodArgumentNotValidException, HandlerMethodValidationException, and ConstraintViolationException only. application.yml has no server.error.include-stacktrace or server.error.include-message settings.",
+      "suggestedFix": "Add explicit production-safe settings: server.error.include-stacktrace=never and server.error.include-message=never. Add sanitized handlers for HttpMessageNotReadableException and a final fallback Exception handler that returns a generic response while logging only non-sensitive operational details.",
+      "sourceAgents": [
+        "security"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "test-quality-1",
+      "severity": "High",
+      "category": "Test Naming Convention",
+      "title": "All test methods violate should_ExpectedResult_when_Condition naming",
+      "description": "The review standard requires camelCase test names in the should_ExpectedResult_when_Condition form. Current names describe behavior, but none use the required specification-style pattern.",
+      "targetFile": "src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+      "lineStart": 13,
+      "lineEnd": 26,
+      "evidence": "Violating methods include greetNormalizesRepeatedWhitespace, greetRejectsBlankName, greetRejectsNullName. Controller tests also violate the same pattern at GreetingControllerTest.java lines 25, 32, 39, 50, and 58.",
+      "suggestedFix": "Rename methods, for example should_returnGreeting_when_nameContainsRepeatedWhitespace(), should_throwIllegalArgumentException_when_nameIsBlank(), should_returnHealthStatus_when_healthEndpointRequested().",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-2",
+      "severity": "High",
+      "category": "AAA Pattern",
+      "title": "Tests do not clearly separate Arrange, Act, and Assert blocks",
+      "description": "Most tests combine the action and assertion in one expression, and controller tests start directly with mockMvc.perform(...).andExpect(...). The required AAA structure is not visible, and Act is not isolated as a single call/result.",
+      "targetFile": "src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 24,
+      "lineEnd": 66,
+      "evidence": "Example: lines 26-28 perform GET /api/health and assert the response in a single chain. GreetingServiceTest lines 14-15 and 20-22 similarly combine Act and Assert.",
+      "suggestedFix": "Use explicit Arrange / Act / Assert sections. For MockMvc tests, assign ResultActions result = mockMvc.perform(...); then assert with result.andExpect(...).",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-3",
+      "severity": "Medium",
+      "category": "Display Names",
+      "title": "Tests do not provide @DisplayName descriptions",
+      "description": "The review standard expects @DisplayName for human-readable test descriptions. None of the eight test methods use @DisplayName, making reports less readable even if method names are improved.",
+      "targetFile": "src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 24,
+      "lineEnd": 58,
+      "evidence": "The test methods are annotated only with @Test. GreetingServiceTest has the same issue at lines 12, 18, and 25.",
+      "suggestedFix": "Add @DisplayName annotations such as @DisplayName(\"Returns greeting when query name is valid\") above each test.",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-4",
+      "severity": "High",
+      "category": "Coverage Criteria",
+      "title": "Public methods remain untested in the JaCoCo report",
+      "description": "The existing JaCoCo report shows missed public methods, which violates the agent rule that all public methods must be tested.",
+      "targetFile": "src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "lineStart": 36,
+      "lineEnd": 37,
+      "evidence": "target/site/jacoco/jacoco.csv reports GlobalExceptionHandler with METHOD_MISSED=1 and LINE_MISSED=1; jacoco.xml shows handleInvalidParameter at line 37 missed. SampleJavaCodeApplication.main at line 18 is also missed.",
+      "suggestedFix": "Add a MockMvc test that triggers HandlerMethodValidationException, for example an over-40-character query parameter. Add a Spring context smoke test for the application bootstrap, or explicitly exclude the bootstrap main class from coverage if that is the project policy.",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-5",
+      "severity": "High",
+      "category": "Error Case Coverage",
+      "title": "Controller error tests are fewer than happy-path tests and miss key validation boundaries",
+      "description": "The controller suite has three happy-path tests and two error-path tests. It also does not cover missing name, empty JSON, malformed JSON, exact max length 40, or over max length 40 for the @Size(max = 40) validation path.",
+      "targetFile": "src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 24,
+      "lineEnd": 66,
+      "evidence": "Happy paths: healthReturnsUp, greetByQueryReturnsGreeting, greetByBodyReturnsGreeting. Error paths: greetByQueryRejectsBlankName, greetByBodyRejectsBlankName. Production validation includes @NotBlank and @Size(max = 40) at GreetingController.java lines 46-58 and GreetingRequest.java lines 9-12.",
+      "suggestedFix": "Add parameterized validation tests for blank, missing, and overlong names for both query and body. Add boundary tests for 40-character names accepted and 41-character names rejected.",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "test-quality-6",
+      "severity": "Medium",
+      "category": "Parameterized Tests",
+      "title": "Repeated invalid-name cases are not modeled as parameterized tests",
+      "description": "The suite tests blank and null service inputs as separate methods and does not cover additional invalid variants. Parameterized tests would reduce duplication and make boundary coverage explicit.",
+      "targetFile": "src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+      "lineStart": 18,
+      "lineEnd": 29,
+      "evidence": "greetRejectsBlankName and greetRejectsNullName repeat the same assertion shape without @ParameterizedTest/@NullSource/@ValueSource.",
+      "suggestedFix": "Use @ParameterizedTest with @NullSource and @ValueSource(strings = {\"\", \" \", \"\\t\"}) for invalid names.",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "conflicts": [],
+  "adjudications": [],
+  "escalations": [
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "security"
+      ],
+      "description": "Confirm whether /api/health and /api/greetings are intentionally public for this sample project. If yes, encode that as explicit permitAll rules and document the rationale; if no, require authentication by default.",
+      "recommendedDecisionMaker": "Product owner or security owner"
+    },
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "test-quality"
+      ],
+      "description": "The workspace is read-only, so I did not rerun Maven. Findings use source inspection plus the existing target/surefire-reports and target/site/jacoco reports.",
+      "recommendedDecisionMaker": "Repository maintainer"
+    }
+  ],
+  "sdkExecution": {
+    "sdkPackage": "@openai/codex-sdk",
+    "concurrency": 3,
+    "sandboxMode": "read-only",
+    "approvalPolicy": "never",
+    "webSearchMode": "disabled",
+    "modelReasoningEffort": "high"
+  },
+  "outputFiles": {
+    "markdown": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/code-review-final-validation/full/check-report-1.md",
+    "json": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/code-review-final-validation/full/check-report-1.json",
+    "events": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/code-review-final-validation/full/check-report-1.events.jsonl"
+  }
+}

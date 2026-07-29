@@ -1,0 +1,289 @@
+{
+  "target": {
+    "rawTarget": "sample-java-code",
+    "targetKind": "directory",
+    "targetName": "sample-java-code",
+    "repoRoot": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar",
+    "files": [
+      "sample-java-code/pom.xml",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/ErrorResponse.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingController.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingRequest.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/GreetingResponse.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/api/HealthResponse.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/SampleJavaCodeApplication.java",
+      "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+      "sample-java-code/src/main/resources/application.yml",
+      "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java"
+    ],
+    "standardsFiles": [
+      "AGENTS.md"
+    ],
+    "designReferenceFiles": []
+  },
+  "verdict": "Rejected",
+  "reviewDate": "2026-06-04T12:59:23.393Z",
+  "agents": [
+    "java-standards"
+  ],
+  "results": [
+    {
+      "agentId": "java-standards",
+      "threadId": "019e92b5-4b67-70a2-be7d-d8207f884361",
+      "status": "completed",
+      "verdict": "fail",
+      "summary": "Java 21 standards review of sample-java-code failed because strict prohibited-pattern rules found field injection and direct construction of a Spring-managed service in test Java sources. Production DTOs correctly use records and no TODO/placeholder/logging prohibited patterns were found in src/main.",
+      "findings": [
+        {
+          "id": "java-standards-1",
+          "severity": "Critical",
+          "category": "Prohibited Pattern / DI",
+          "title": "Field injection with @Autowired remains in Java source",
+          "description": "The standards prohibit @Autowired field injection in all Java files. GreetingControllerTest injects MockMvc through a mutable field, which violates the constructor-injection rule even though it is test code.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+          "lineStart": 21,
+          "lineEnd": 22,
+          "evidence": "@Autowired\nprivate MockMvc mockMvc;",
+          "suggestedFix": "Use constructor injection for the test dependency, for example a final MockMvc field initialized by an @Autowired constructor.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-2",
+          "severity": "Critical",
+          "category": "Prohibited Pattern / DI",
+          "title": "Spring-managed service is directly instantiated",
+          "description": "GreetingService is annotated with @Service in production code, but the test creates it with new GreetingService(). The strict standard prohibits direct new XxxService() construction of DI-managed beans in Java files.",
+          "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+          "lineStart": 10,
+          "lineEnd": 10,
+          "evidence": "private final GreetingService greetingService = new GreetingService();",
+          "suggestedFix": "Load GreetingService through Spring test support with constructor injection, or extract pure greeting logic into a non-Spring class if direct unit construction is desired.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-3",
+          "severity": "High",
+          "category": "DI Pattern Quality",
+          "title": "Service interface is missing for GreetingService",
+          "description": "The DI checklist requires Service and Repository classes to have corresponding interfaces. GreetingService is a concrete @Service without an interface contract, reducing consistency with the mandated service abstraction pattern.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+          "lineStart": 9,
+          "lineEnd": 10,
+          "evidence": "@Service\npublic class GreetingService {",
+          "suggestedFix": "Introduce a GreetingService interface and implement it with a concrete class such as DefaultGreetingService, then inject the interface into GreetingController.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-4",
+          "severity": "High",
+          "category": "Null Safety",
+          "title": "Nullable service input is not annotated",
+          "description": "GreetingService.greet accepts null behaviorally, as confirmed by the null-input test, but the public method parameter has no @Nullable or @NonNull contract. The null-safety standard requires annotations where nullability is ambiguous.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+          "lineStart": 19,
+          "lineEnd": 20,
+          "evidence": "public GreetingResponse greet(String name) {\n  String normalizedName = normalizeName(name);",
+          "suggestedFix": "Declare the intended contract explicitly, for example @NonNull plus an immediate validation/requireNonNull path, or @Nullable if null is intentionally accepted and normalized.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "java-standards-5",
+          "severity": "High",
+          "category": "Naming Conventions",
+          "title": "Package root does not match the declared project base package",
+          "description": "The review agent context declares the project base package as com.skishop, but the sample code uses com.codexskishop.sample. The package is lowercase and syntactically valid, but it is inconsistent with the stated project-wide base package.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/SampleJavaCodeApplication.java",
+          "lineStart": 1,
+          "lineEnd": 1,
+          "evidence": "package com.codexskishop.sample;",
+          "suggestedFix": "If sample-java-code is part of the same migration codebase, rename the Java package tree to com.skishop.sample and align Maven groupId/package references. If this directory is intentionally exempt, document that exemption.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "id": "java-standards-6",
+          "severity": "Medium",
+          "category": "Time API / Testability",
+          "title": "Current time is read directly instead of through Clock",
+          "description": "The Java instructions prefer time handling with Instant/LocalDateTime and Clock. GlobalExceptionHandler uses Instant.now() directly, making error timestamps harder to test deterministically and less consistent with the Clock-based rule.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+          "lineStart": 54,
+          "lineEnd": 54,
+          "evidence": ".body(new ErrorResponse(\"Request validation failed.\", Instant.now()));",
+          "suggestedFix": "Inject a Clock bean and call Instant.now(clock) when creating ErrorResponse.",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "confidence": "medium"
+        }
+      ],
+      "escalations": [
+        {
+          "priority": "normal",
+          "sourceAgents": [
+            "java-standards"
+          ],
+          "description": "Confirm whether sample-java-code is intentionally exempt from the migration base package com.skishop. If it is an isolated command-check sample, the package-root finding can be downgraded or waived with documentation.",
+          "recommendedDecisionMaker": "Tech lead / repository owner"
+        }
+      ],
+      "designDeviations": [
+        {
+          "document": "orchest-code-review-java-standards agent context",
+          "description": "Target code uses package root com.codexskishop.sample while the review context states base package com.skishop.",
+          "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/SampleJavaCodeApplication.java"
+        }
+      ],
+      "score": 14,
+      "usage": {
+        "inputTokens": 132376,
+        "cachedInputTokens": 96768,
+        "outputTokens": 7477,
+        "reasoningOutputTokens": 3803
+      },
+      "rawMarkdown": "# Source Code Review Report: Java 21 Coding Standards Review\n\n## Summary\n- **Review Target**: sample-java-code\n- **Verdict**: Fail\n- **Issue Count**: Critical: 2 / High: 3 / Medium: 1 / Low: 0\n\n## Prohibited Pattern Detection Results\n| # | Pattern | Count | Target File | Line # |\n|---|---------|-------|-------------|--------|\n| 1 | @Autowired field injection | 1 | sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java | 21 |\n| 2 | new XxxService() direct instantiation | 1 | sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java | 10 |\n\n## Incomplete / Shortcut Implementation Detection Results\n| # | Type | Detection | Target File | Line # | Details |\n|---|------|-----------|-------------|--------|---------|\n| - | None | No TODO/FIXME/HACK/XXX, UnsupportedOperationException, placeholder exception, or production Mock/Stub/Fake/Dummy hit found | - | - | Static scan only |\n\n## Naming Convention Check Results\n| File | Violation Location | Current Name | Recommended Name |\n|------|-------------------|-------------|------------------|\n| sample-java-code/src/main/java/com/codexskishop/sample/SampleJavaCodeApplication.java | package declaration | com.codexskishop.sample | com.skishop.sample, if this sample is not exempt |\n\n## Issues\n| # | Severity | Category | Target File | Line # | Issue Description | Fix Example |\n|---|----------|----------|-------------|--------|-------------------|-------------|\n| 1 | Critical | Prohibited Pattern / DI | sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java | 21 | @Autowired field injection remains in Java source | Use a final field initialized by an @Autowired constructor |\n| 2 | Critical | Prohibited Pattern / DI | sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java | 10 | DI-managed @Service is directly constructed with new GreetingService() | Inject through Spring test support or extract pure non-Spring logic |\n| 3 | High | DI Pattern Quality | sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java | 9 | @Service has no corresponding interface | Add GreetingService interface and inject that contract |\n| 4 | High | Null Safety | sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java | 19 | Public service parameter accepts null behavior but has no nullability annotation | Add @Nullable or enforce @NonNull explicitly |\n| 5 | High | Naming Conventions | sample-java-code/src/main/java/com/codexskishop/sample/SampleJavaCodeApplication.java | 1 | Package root differs from declared com.skishop base package | Rename to com.skishop.sample or document exemption |\n| 6 | Medium | Time API / Testability | sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java | 54 | Instant.now() is called directly instead of using an injected Clock | Inject Clock and use Instant.now(clock) |\n\n## Scorecard\n| Evaluation Item | Score (1-5) | Notes |\n|----------------|-------------|-------|\n| Naming Conventions | 3/5 | Java identifiers are mostly clean, but package root appears inconsistent with the declared base package |\n| Java 21 Feature Adoption | 4/5 | DTOs are records and tests use text blocks; no obvious legacy instanceof/switch cases found |\n| Prohibited Pattern Compliance | 1/5 | Critical @Autowired field injection and direct new XxxService() detected |\n| DI Pattern Quality | 2/5 | Production constructor injection is good, but service interface is missing and tests bypass DI rules |\n| Null Safety | 3/5 | No Optional misuse or null collection returns found; nullable service parameter contract is ambiguous |\n| **Total Score** | **14/25** | Fails due to Critical prohibited-pattern findings |\n\n## Escalation Items (Requires Human Judgment)\n- Confirm whether sample-java-code is intentionally exempt from the migration base package com.skishop.\n\n## Verification Notes\n- This was a static source review only. No files were modified and no build/test command was executed.",
+      "startedAt": "2026-06-04T12:56:52.975Z",
+      "completedAt": "2026-06-04T12:59:23.392Z",
+      "durationMs": 150417
+    }
+  ],
+  "findings": [
+    {
+      "id": "java-standards-1",
+      "severity": "Critical",
+      "category": "Prohibited Pattern / DI",
+      "title": "Field injection with @Autowired remains in Java source",
+      "description": "The standards prohibit @Autowired field injection in all Java files. GreetingControllerTest injects MockMvc through a mutable field, which violates the constructor-injection rule even though it is test code.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/api/GreetingControllerTest.java",
+      "lineStart": 21,
+      "lineEnd": 22,
+      "evidence": "@Autowired\nprivate MockMvc mockMvc;",
+      "suggestedFix": "Use constructor injection for the test dependency, for example a final MockMvc field initialized by an @Autowired constructor.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-2",
+      "severity": "Critical",
+      "category": "Prohibited Pattern / DI",
+      "title": "Spring-managed service is directly instantiated",
+      "description": "GreetingService is annotated with @Service in production code, but the test creates it with new GreetingService(). The strict standard prohibits direct new XxxService() construction of DI-managed beans in Java files.",
+      "targetFile": "sample-java-code/src/test/java/com/codexskishop/sample/service/GreetingServiceTest.java",
+      "lineStart": 10,
+      "lineEnd": 10,
+      "evidence": "private final GreetingService greetingService = new GreetingService();",
+      "suggestedFix": "Load GreetingService through Spring test support with constructor injection, or extract pure greeting logic into a non-Spring class if direct unit construction is desired.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-3",
+      "severity": "High",
+      "category": "DI Pattern Quality",
+      "title": "Service interface is missing for GreetingService",
+      "description": "The DI checklist requires Service and Repository classes to have corresponding interfaces. GreetingService is a concrete @Service without an interface contract, reducing consistency with the mandated service abstraction pattern.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+      "lineStart": 9,
+      "lineEnd": 10,
+      "evidence": "@Service\npublic class GreetingService {",
+      "suggestedFix": "Introduce a GreetingService interface and implement it with a concrete class such as DefaultGreetingService, then inject the interface into GreetingController.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-4",
+      "severity": "High",
+      "category": "Null Safety",
+      "title": "Nullable service input is not annotated",
+      "description": "GreetingService.greet accepts null behaviorally, as confirmed by the null-input test, but the public method parameter has no @Nullable or @NonNull contract. The null-safety standard requires annotations where nullability is ambiguous.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/service/GreetingService.java",
+      "lineStart": 19,
+      "lineEnd": 20,
+      "evidence": "public GreetingResponse greet(String name) {\n  String normalizedName = normalizeName(name);",
+      "suggestedFix": "Declare the intended contract explicitly, for example @NonNull plus an immediate validation/requireNonNull path, or @Nullable if null is intentionally accepted and normalized.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "java-standards-5",
+      "severity": "High",
+      "category": "Naming Conventions",
+      "title": "Package root does not match the declared project base package",
+      "description": "The review agent context declares the project base package as com.skishop, but the sample code uses com.codexskishop.sample. The package is lowercase and syntactically valid, but it is inconsistent with the stated project-wide base package.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/SampleJavaCodeApplication.java",
+      "lineStart": 1,
+      "lineEnd": 1,
+      "evidence": "package com.codexskishop.sample;",
+      "suggestedFix": "If sample-java-code is part of the same migration codebase, rename the Java package tree to com.skishop.sample and align Maven groupId/package references. If this directory is intentionally exempt, document that exemption.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "java-standards-6",
+      "severity": "Medium",
+      "category": "Time API / Testability",
+      "title": "Current time is read directly instead of through Clock",
+      "description": "The Java instructions prefer time handling with Instant/LocalDateTime and Clock. GlobalExceptionHandler uses Instant.now() directly, making error timestamps harder to test deterministically and less consistent with the Clock-based rule.",
+      "targetFile": "sample-java-code/src/main/java/com/codexskishop/sample/api/GlobalExceptionHandler.java",
+      "lineStart": 54,
+      "lineEnd": 54,
+      "evidence": ".body(new ErrorResponse(\"Request validation failed.\", Instant.now()));",
+      "suggestedFix": "Inject a Clock bean and call Instant.now(clock) when creating ErrorResponse.",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "conflicts": [],
+  "adjudications": [],
+  "escalations": [
+    {
+      "priority": "normal",
+      "sourceAgents": [
+        "java-standards"
+      ],
+      "description": "Confirm whether sample-java-code is intentionally exempt from the migration base package com.skishop. If it is an isolated command-check sample, the package-root finding can be downgraded or waived with documentation.",
+      "recommendedDecisionMaker": "Tech lead / repository owner"
+    }
+  ],
+  "sdkExecution": {
+    "sdkPackage": "@openai/codex-sdk",
+    "concurrency": 1,
+    "sandboxMode": "read-only",
+    "approvalPolicy": "never",
+    "webSearchMode": "disabled",
+    "modelReasoningEffort": "high"
+  },
+  "outputFiles": {
+    "markdown": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-sample-java/sample-java-code/check-report-1.md",
+    "json": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-sample-java/sample-java-code/check-report-1.json",
+    "events": "/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/review-reports/manual-sample-java/sample-java-code/check-report-1.events.jsonl"
+  }
+}
