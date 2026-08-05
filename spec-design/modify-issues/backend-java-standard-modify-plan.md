@@ -1,77 +1,77 @@
 # Java Standards Remediation Plan
 
-作成日: 2026-06-04
+Created: 2026-06-04
 
-対象レポート: `review-reports/manual-backend-java-standards/backend/check-report-1.md`
+Source report: `review-reports/manual-backend-java-standards/backend/check-report-1.md`
 
-## 1. 目的
+## 1. Purpose
 
-この計画は、Java standards review で指摘された backend の課題を、実装時に迷わず修正できる粒度まで具体化するためのものである。
+This plan translates the issues identified during the Java standards review of the backend into concrete, implementation-ready remediation tasks.
 
-対象範囲は主に `backend/` だが、seed data の image URL と frontend API contract に影響する項目があるため、必要に応じて `frontend/`、root documentation、設計書も同時に更新する。
+The primary scope is `backend/`. However, some changes affect seed-data image URLs and the frontend API contract. Therefore, `frontend/`, root-level documentation, and design documents must also be updated when required.
 
-## 2. 修正方針サマリ
+## 2. Remediation Summary
 
-| # | 指摘 | 推奨対応 | API 破壊リスク |
-|---:|---|---|---|
-| 1 | placeholder/sample artifacts | DTO コメントを実契約表現へ修正し、seed image path を OSS-safe な実アセットへ差し替える | 低 |
-| 2 | Spring Boot 3.5.8 が 3.2.x baseline と不一致 | まず 3.2.x へ align 可能か検証。不可なら標準例外を明文化 | 中 |
-| 3 | package が `com.codexskishop` | `com.skishop` へ package / groupId を rename | 低 |
-| 4 | DI service interface 不足 | Controller/filter boundary に use-case interface を導入 | 低 |
-| 5 | nullable contract annotation 不足 | nullable request/helper parameters に `@Nullable`、必要箇所に non-null 方針を追加 | 低 |
-| 6 | boolean DTO component naming | Java component は prefix 付きに変更し、`@JsonProperty` で既存 JSON field を維持 | 中 |
+| # | Finding | Recommended Action | API Compatibility Risk |
+| ---: | --- | --- | --- |
+| 1 | Placeholder and sample artifacts | Rewrite DTO comments as actual contract documentation and replace seed image paths with OSS-safe production assets | Low |
+| 2 | Spring Boot 3.5.8 does not match the 3.2.x baseline | First verify whether alignment with 3.2.x is feasible. If it is not, document an approved standards exception | Medium |
+| 3 | Packages use `com.codexskishop` | Rename the Java package namespace and Maven `groupId` to `com.skishop` | Low |
+| 4 | Missing interfaces for dependency-injected services | Introduce use-case interfaces at controller and filter boundaries | Low |
+| 5 | Missing nullability contract annotations | Add `@Nullable` to nullable request and helper parameters, and establish a non-null policy where appropriate | Low |
+| 6 | Boolean DTO component naming | Add boolean prefixes to Java record component names while preserving existing JSON field names with `@JsonProperty` | Medium |
 
-## 3. 前提と判断ゲート
+## 3. Prerequisites and Decision Gates
 
-### 3.1 Spring Boot version
+### 3.1 Spring Boot Version
 
-レビュー基準は Spring Boot 3.2.x である。一方、現在の backend は Spring Boot `3.5.8` と Spring AI `1.1.7` を利用しているため、単純な downgrade で Spring AI / Spring Framework / test dependency の互換性問題が出る可能性がある。
+The review baseline requires Spring Boot 3.2.x. The backend currently uses Spring Boot `3.5.8` and Spring AI `1.1.7`, so a direct downgrade may cause compatibility problems involving Spring AI, Spring Framework, or test dependencies.
 
-実装時の判断手順:
+Use the following decision process during implementation:
 
-1. `backend/pom.xml` の parent version を Spring Boot 3.2.x 系へ変更する候補を作る。
-   - 例: `3.2.12` など、3.2 系の利用可能な最終 patch version。
-2. `./mvnw -U -DskipTests compile` を実行する。
-3. compile が通る場合は `./mvnw verify` まで進める。
-4. Spring AI などの依存互換性で失敗する場合は、次のどちらかを選ぶ。
-   - Spring AI BOM / starter も 3.2.x と互換のある版へ下げる。
-   - Spring Boot 3.5.8 を意図的採用として、標準例外を文書化し、review baseline を更新する。
+1. Prepare a candidate change that updates the parent version in `backend/pom.xml` to a Spring Boot 3.2.x release.
+   - For example, use `3.2.12` or the latest available patch release in the 3.2 line.
+2. Run `./mvnw -U -DskipTests compile`.
+3. If compilation succeeds, continue with `./mvnw verify`.
+4. If the build fails because of Spring AI or other dependency incompatibilities, choose one of the following options:
+   - Downgrade the Spring AI BOM and starter to versions compatible with Spring Boot 3.2.x.
+   - Retain Spring Boot 3.5.8 as an intentional architectural choice, document a standards exception, and update the review baseline.
 
-この計画の主案は「3.2.x へ align して review baseline を満たす」だが、互換性検証で破綻する場合は、例外文書化を正式な修正として扱う。
+The preferred approach in this plan is to align with 3.2.x and satisfy the review baseline. If compatibility validation proves that approach impractical, an approved and documented exception is considered a valid remediation.
 
-### 3.2 Package namespace
+### 3.2 Package Namespace
 
-レビュー基準は `com.skishop` である。backend-design では `com.codexskishop` が例として使われているが、今回の Java standards review を通す目的では `com.skishop` へ rename する。
+The review baseline requires `com.skishop`. Although `backend-design.md` uses `com.codexskishop` in examples, this remediation will rename the implementation to `com.skishop` to satisfy the Java standards review.
 
-この変更は Java package / Maven groupId の変更であり、HTTP API path や JSON contract には影響させない。
+This change affects Java packages and the Maven `groupId`. It must not alter HTTP API paths or JSON contracts.
 
-## 4. Finding 1: Placeholder / Sample Artifacts
+## 4. Finding 1: Placeholder and Sample Artifacts
 
-### 4.1 対象
+### 4.1 Scope
 
 - `backend/src/main/java/com/codexskishop/dto/ProductDto.java`
 - `backend/src/main/resources/db/migration/V2__seed_products.sql`
-- 必要に応じて `frontend/public/images/products/`
-- 必要に応じて README / design docs
+- `frontend/public/images/products/`, if required
+- README and design documents, if required
 
-### 4.2 問題
+### 4.2 Problem
 
-`ProductDto` の Javadoc に `sample price`、`placeholder image URL` という production API として未完成に見える表現が残っている。
+The Javadoc in `ProductDto` contains phrases such as `sample price` and `placeholder image URL`, which make the production API appear incomplete.
 
-また seed data の `image_url` が `*-placeholder.png` を繰り返し参照しており、review では production source の placeholder artifact と判定されている。
+In addition, seed-data values in `image_url` repeatedly reference files named `*-placeholder.png`. The review classifies these as placeholder artifacts in production source code.
 
-### 4.3 修正内容
+### 4.3 Required Changes
 
-1. `ProductDto` の Javadoc を実契約として書き換える。
-   - `JPY sample price` -> `price in JPY`
-   - `optional placeholder image URL` -> `optional product image URL`
-2. seed data の image URL を placeholder 名から OSS-safe な実アセット名へ変更する。
-   - 例:
+1. Rewrite the `ProductDto` Javadoc as an actual API contract.
+   - Change `JPY sample price` to `price in JPY`.
+   - Change `optional placeholder image URL` to `optional product image URL`.
+2. Replace placeholder file names in seed-data image URLs with OSS-safe production asset names.
+   - Examples:
      - `/images/products/skis-placeholder.png` -> `/images/products/skis.png`
      - `/images/products/ski-boots-placeholder.png` -> `/images/products/ski-boots.png`
      - `/images/products/bindings-placeholder.png` -> `/images/products/bindings.png`
-3. frontend の `public/images/products/` に、seed category と一致する OSS-safe な画像アセットを置く。
-   - 対象 category:
+3. Add OSS-safe image assets to `frontend/public/images/products/` that match every seed-data category.
+   - Required categories:
      - `skis`
      - `ski-boots`
      - `bindings`
@@ -82,116 +82,116 @@
      - `poles`
      - `wax`
      - `tuning-goods`
-   - 外部ライセンス不明画像は使わない。
-   - 自作 SVG / 生成 bitmap / OSS ライセンスが明確な画像のみ使う。
-4. frontend 側で画像 path fallback が placeholder 前提になっている場合は、実アセット名に合わせて更新する。
-5. seed data が demo catalog であることは README に説明してよいが、placeholder を残す理由として使わない。
+   - Do not use external images with unknown or unclear licenses.
+   - Use only original SVGs, generated bitmap images, or images with clearly identified OSS-compatible licenses.
+4. If frontend image fallback logic assumes placeholder file names, update it to use the production asset names.
+5. The README may explain that the seed data is a demonstration catalog, but that explanation must not be used to justify retaining placeholder artifacts.
 
-### 4.4 確認方法
+### 4.4 Validation
 
-- `rg -n "sample|placeholder" backend/src/main backend/src/main/resources`
-- `./mvnw verify`
-- `docker compose --env-file .env.example up --build -d`
-- `GET /api/products?limit=3` の `imageUrl` が `placeholder` を含まないこと。
-- frontend の商品カード画像または category visual が壊れていないこと。
+- Run `rg -n "sample|placeholder" backend/src/main backend/src/main/resources`.
+- Run `./mvnw verify`.
+- Run `docker compose --env-file .env.example up --build -d`.
+- Verify that `imageUrl` values returned by `GET /api/products?limit=3` do not contain `placeholder`.
+- Verify that product card images or category visuals render correctly in the frontend.
 
 ## 5. Finding 2: Spring Boot 3.2.x Baseline
 
-### 5.1 対象
+### 5.1 Scope
 
 - `backend/pom.xml`
-- 必要に応じて Spring AI BOM version
+- Spring AI BOM version, if required
 - `backend/README.md`
-- root `README.md`
-- 必要に応じて standards exception document
+- Root `README.md`
+- Standards exception document, if required
 
-### 5.2 問題
+### 5.2 Problem
 
-現在の parent は Spring Boot `3.5.8` だが、Java standards review baseline は Spring Boot `3.2.x` である。
+The current parent version is Spring Boot `3.5.8`, while the Java standards review baseline requires Spring Boot `3.2.x`.
 
-### 5.3 主案: 3.2.x へ align
+### 5.3 Preferred Approach: Align with 3.2.x
 
-1. `backend/pom.xml` の parent version を 3.2.x 系へ変更する。
-2. Spring AI BOM `1.1.7` の互換性を確認する。
-3. 依存解決、compile、test が失敗する場合は Spring AI BOM / starter の互換 version を調査し、同時に調整する。
-4. `./mvnw dependency:tree` を確認し、Spring Framework / Spring Security / Spring Data の version が意図せず混線していないことを確認する。
-5. `./mvnw verify` を通す。
-6. Docker build を確認する。
+1. Change the parent version in `backend/pom.xml` to a 3.2.x release.
+2. Verify compatibility with Spring AI BOM `1.1.7`.
+3. If dependency resolution, compilation, or tests fail, identify and configure a compatible Spring AI BOM and starter version.
+4. Inspect `./mvnw dependency:tree` and verify that Spring Framework, Spring Security, and Spring Data versions are not unintentionally mixed across release lines.
+5. Ensure that `./mvnw verify` succeeds.
+6. Verify the Docker build.
 
-### 5.4 代替案: 3.5.8 を標準例外として承認
+### 5.4 Alternative: Approve Spring Boot 3.5.8 as a Standards Exception
 
-3.2.x への align が Spring AI や現行 Next.js/backend contract に対して過剰な downgrade risk を持つ場合は、次を作成する。
+If alignment with 3.2.x introduces excessive downgrade risk for Spring AI or the existing Next.js/backend contract, create the following document:
 
 - `docs/standards-exceptions/java-standard-exceptions.md`
 
-記載内容:
+Document all of the following:
 
-- Spring Boot 3.5.8 を採用する理由
-- Java 21 / Spring Security / Spring AI との互換性
-- review baseline 3.2.x からの差分
-- 実行済み検証:
+- The reason for selecting Spring Boot 3.5.8.
+- Compatibility considerations for Java 21, Spring Security, and Spring AI.
+- Differences from the Spring Boot 3.2.x review baseline.
+- Completed validation evidence:
   - `./mvnw verify`
-  - Docker compose smoke
-  - full-stack browser journey
+  - Docker Compose smoke test
+  - Full-stack browser journey
 
-この代替案を採る場合、check-report の Escalation Item に対する maintainer decision として扱う。
+If this alternative is selected, treat the document as the maintainer decision for the escalation item in the check report.
 
-### 5.5 確認方法
+### 5.5 Validation
 
-- `./mvnw -U -DskipTests compile`
-- `./mvnw verify`
-- `docker compose --env-file .env.example up --build -d`
-- `/actuator/health`
-- AI fallback endpoint
+- Run `./mvnw -U -DskipTests compile`.
+- Run `./mvnw verify`.
+- Run `docker compose --env-file .env.example up --build -d`.
+- Verify `/actuator/health`.
+- Verify the AI fallback endpoint.
 
 ## 6. Finding 3: Package Namespace
 
-### 6.1 対象
+### 6.1 Scope
 
 - `backend/pom.xml`
 - `backend/src/main/java/com/codexskishop/**`
 - `backend/src/test/java/com/codexskishop/**`
 - Java imports in all backend tests
-- README / design references where implementation package is named
+- README and design references that name the implementation package
 
-### 6.2 問題
+### 6.2 Problem
 
-レビュー基準は `com.skishop` だが、現在の base package は `com.codexskishop` である。
+The review baseline requires `com.skishop`, but the current base package is `com.codexskishop`.
 
-### 6.3 修正内容
+### 6.3 Required Changes
 
-1. Maven groupId を変更する。
+1. Change the Maven `groupId`:
    - `com.codexskishop` -> `com.skishop`
-2. main package directory を変更する。
+2. Move the main package directory:
    - `backend/src/main/java/com/codexskishop` -> `backend/src/main/java/com/skishop`
-3. test package directory を変更する。
+3. Move the test package directory:
    - `backend/src/test/java/com/codexskishop` -> `backend/src/test/java/com/skishop`
-4. 全 Java ファイルの package declaration を置換する。
+4. Replace package declarations in every Java file:
    - `package com.codexskishop...` -> `package com.skishop...`
-5. 全 import を置換する。
+5. Replace all imports:
    - `import com.codexskishop...` -> `import com.skishop...`
-6. Spring Boot main class は新 package で起動できるようにする。
-7. `@SpringBootTest` の component scan が壊れていないことを確認する。
-8. README や phase acceptance docs で package 名に言及している箇所があれば更新する。
+6. Ensure that the Spring Boot main class starts successfully from the new package.
+7. Verify that component scanning in `@SpringBootTest` still works.
+8. Update package references in README files and phase acceptance documents, if present.
 
-### 6.4 実装時の注意
+### 6.4 Implementation Constraints
 
-- HTTP endpoint は変更しない。
-- JSON field 名は変更しない。
-- DB schema / migration file 名は変更しない。
-- package rename は機械的変更量が大きいため、他の refactor と混ぜない。
+- Do not change HTTP endpoints.
+- Do not change JSON field names.
+- Do not change the database schema or migration file names.
+- Because this rename affects many files mechanically, do not combine it with unrelated refactoring.
 
-### 6.5 確認方法
+### 6.5 Validation
 
-- `rg -n "com\\.codexskishop" backend`
-- `./mvnw verify`
-- `docker compose --env-file .env.example up --build -d`
+- Run `rg -n "com\\.codexskishop" backend`.
+- Run `./mvnw verify`.
+- Run `docker compose --env-file .env.example up --build -d`.
 
-## 7. Finding 4: DI-managed Service Interfaces
+## 7. Finding 4: Interfaces for Dependency-Injected Services
 
-### 7.1 対象
+### 7.1 Scope
 
-Controller/filter boundary で注入される service:
+Services injected at controller or filter boundaries:
 
 - `ProductQueryService`
 - `ProductSearchService`
@@ -199,79 +199,79 @@ Controller/filter boundary で注入される service:
 - `ZeroHitQueryService`
 - `AiConsultationService`
 
-既存 interface:
+Existing interface:
 
-- `AiProviderClient` は既に存在するため維持する。
+- Retain `AiProviderClient`; it already defines the appropriate boundary.
 
-### 7.2 問題
+### 7.2 Problem
 
-Controller や security filter が concrete service class に依存している。レビュー基準では DI-managed service に対応する interface を持ち、境界では interface に依存することが求められている。
+Controllers and the security filter depend directly on concrete service classes. The review baseline requires interfaces for dependency-injected services and requires boundary components to depend on those interfaces.
 
-### 7.3 修正内容
+### 7.3 Required Changes
 
-次の use-case interface を追加する。
+Add the following use-case interfaces:
 
 1. `ProductQueryUseCase`
-   - method:
+   - Method:
      - `ProductListResponse listProducts(@Nullable Integer limit, @Nullable String category, @Nullable String sort);`
-   - implemented by `ProductQueryService`
-   - injected into `ProductController`
+   - Implemented by `ProductQueryService`.
+   - Injected into `ProductController`.
 2. `ProductSearchUseCase`
-   - method:
+   - Method:
      - `ProductSearchResponse search(@Nullable String q, @Nullable Integer limit, @Nullable String category, @Nullable String sort);`
-   - implemented by `ProductSearchService`
-   - injected into `ProductController`
+   - Implemented by `ProductSearchService`.
+   - Injected into `ProductController`.
 3. `AdminAuthUseCase`
-   - methods:
+   - Methods:
      - `LoginResponse login(String username, String password);`
      - `Optional<AdminUserDto> validateToken(@Nullable String token);`
-   - implemented by `AdminAuthService`
-   - injected into `AuthController` and `BearerTokenAuthenticationFilter`
+   - Implemented by `AdminAuthService`.
+   - Injected into `AuthController` and `BearerTokenAuthenticationFilter`.
 4. `ZeroHitQueryUseCase`
-   - method:
+   - Method:
      - `ZeroHitListResponse listZeroHits(@Nullable Integer days, @Nullable String sort, @Nullable Integer limit);`
-   - implemented by `ZeroHitQueryService`
-   - injected into `AdminZeroHitController`
+   - Implemented by `ZeroHitQueryService`.
+   - Injected into `AdminZeroHitController`.
 5. `AiConsultUseCase`
-   - method:
+   - Method:
      - `AiConsultResponse consult(AiConsultRequest request);`
-   - implemented by `AiConsultationService`
-   - injected into `AiConsultController`
+   - Implemented by `AiConsultationService`.
+   - Injected into `AiConsultController`.
 
-### 7.4 実装例
+### 7.4 Implementation Example
 
 ```java
 public interface ProductQueryUseCase {
-	ProductListResponse listProducts(@Nullable Integer limit, @Nullable String category, @Nullable String sort);
+   ProductListResponse listProducts(@Nullable Integer limit, @Nullable String category, @Nullable String sort);
 }
 
 @Service
 public class ProductQueryService implements ProductQueryUseCase {
-	@Override
-	@Transactional(readOnly = true)
-	public ProductListResponse listProducts(@Nullable Integer limit, @Nullable String category, @Nullable String sort) {
-		...
-	}
+   @Override
+   @Transactional(readOnly = true)
+   public ProductListResponse listProducts(@Nullable Integer limit, @Nullable String category, @Nullable String sort) {
+      ...
+   }
 }
 ```
 
-### 7.5 実装時の注意
+### 7.5 Implementation Constraints
 
-- interface は use-case contract を表す。Repository-like な細かい操作を並べない。
-- Service implementation の class name は維持してよい。
-- Internal collaborator まで無理に interface 化しない。
-  - 例: `ProductMapper`, `ZeroHitMapper`, `AiPromptBuilder`, `OpportunityLossCalculator`
-- `AiProviderClient` は external provider boundary として既に適切な interface なので追加不要。
+- Each interface must represent a use-case contract. Do not expose a collection of low-level, repository-like operations.
+- Existing service implementation class names may remain unchanged.
+- Do not create interfaces for internal collaborators without a concrete boundary or substitution requirement.
+  - Examples: `ProductMapper`, `ZeroHitMapper`, `AiPromptBuilder`, and `OpportunityLossCalculator`.
+- `AiProviderClient` is already an appropriate interface for the external provider boundary; do not introduce another interface for the same responsibility.
 
-### 7.6 確認方法
+### 7.6 Validation
 
-- Controller / filter が concrete service ではなく interface を constructor injection していること。
-- `./mvnw verify`
-- Spring context load test
+- Verify that controllers and the filter use constructor injection with interfaces rather than concrete service classes.
+- Run `./mvnw verify`.
+- Run the Spring context load test.
 
-## 8. Finding 5: Null Safety Annotation
+## 8. Finding 5: Null-Safety Annotations
 
-### 8.1 対象
+### 8.1 Scope
 
 Nullable request parameters and helper methods:
 
@@ -281,29 +281,29 @@ Nullable request parameters and helper methods:
 - `ProductQueryService.listProducts(...)`
 - `ProductSearchService.search(...)`
 - `ZeroHitQueryService.listZeroHits(...)`
-- Controller `@RequestParam(required = false)` parameters
+- Controller parameters annotated with `@RequestParam(required = false)`
 - `AdminAuthService.validateToken(String token)`
-- `BearerTokenAuthenticationFilter` token extraction path
-- AI request optional fields are DTO-level nullable by design
+- Token extraction in `BearerTokenAuthenticationFilter`
+- Optional AI request fields, which are nullable by DTO design
 
-### 8.2 問題
+### 8.2 Problem
 
-Nullable values are accepted implicitly. Public contracts and helper methods do not communicate which arguments may be null.
+The code accepts nullable values implicitly. Public contracts and helper methods do not communicate which arguments may be `null`.
 
-### 8.3 修正内容
+### 8.3 Required Changes
 
-1. Spring の nullability annotation を利用する。
+1. Use Spring nullability annotations:
    - `org.springframework.lang.Nullable`
-   - 必要に応じて `org.springframework.lang.NonNullApi` を package-level に追加する。
-2. `@RequestParam(required = false)` の Java parameters に `@Nullable` を付ける。
-3. nullable helper parameters に `@Nullable` を付ける。
-4. interface method と implementation method の nullability annotation を一致させる。
-5. return value が null にならない method は annotation を省略するか、package-level `@NonNullApi` を使う。
-6. DTO record component で optional な値は、Javadoc と validation annotation で明確化する。
+   - Add `org.springframework.lang.NonNullApi` at package level where appropriate.
+2. Add `@Nullable` to Java parameters corresponding to `@RequestParam(required = false)`.
+3. Add `@Nullable` to nullable helper-method parameters.
+4. Keep nullability annotations consistent between interface methods and their implementations.
+5. For methods that never return `null`, either omit a method-level annotation or enforce the default through package-level `@NonNullApi`.
+6. Clarify optional DTO record components through Javadoc and validation annotations.
 
-### 8.4 package-level annotation の案
+### 8.4 Proposed Package-Level Annotation
 
-必要に応じて package ごとに `package-info.java` を作成する。
+Create `package-info.java` in relevant packages if package-level defaults are appropriate:
 
 ```java
 @NonNullApi
@@ -312,32 +312,32 @@ package com.skishop.service;
 import org.springframework.lang.NonNullApi;
 ```
 
-ただし package rename と同時に行うため、`com.skishop` namespace への移行後に追加する。
+Because this change is coordinated with the package rename, add these files only after migration to the `com.skishop` namespace.
 
-### 8.5 確認方法
+### 8.5 Validation
 
-- `rg -n "required = false" backend/src/main/java`
-- nullable request params が `@Nullable` を持つこと。
-- `./mvnw verify`
-- IDE / static analysis で nullability warning が増えないこと。
+- Run `rg -n "required = false" backend/src/main/java`.
+- Verify that all nullable request parameters have `@Nullable`.
+- Run `./mvnw verify`.
+- Verify that IDE or static-analysis nullability warnings do not increase.
 
 ## 9. Finding 6: Boolean DTO Naming
 
-### 9.1 対象
+### 9.1 Scope
 
 - `LoginResponse`
 - `AuthMeResponse`
 - `ProductSearchResponse`
-- Backend tests that call record accessors
+- Backend tests that invoke record accessors
 - Frontend contract tests
-- frontend `src/types/api.ts`
-- frontend API validators and tests if JSON names change
+- `frontend/src/types/api.ts`
+- Frontend API validators and tests if JSON names change
 
-### 9.2 問題
+### 9.2 Problem
 
-Java record component が boolean prefix を持たない。
+The Java record components for boolean values do not use boolean prefixes.
 
-Current:
+Current names:
 
 - `LoginResponse.success`
 - `AuthMeResponse.authenticated`
@@ -349,159 +349,159 @@ Recommended Java names:
 - `isAuthenticated`
 - `hasZeroHitRecorded`
 
-ただし frontend contract は `success`, `authenticated`, `zeroHitRecorded` を期待している。JSON field を変更すると frontend-design と Phase 9 contract tests を壊すため、Java component name だけを変更し、JSON field は `@JsonProperty` で維持する。
+The frontend contract expects the JSON fields `success`, `authenticated`, and `zeroHitRecorded`. Changing those JSON field names would break `frontend-design.md` and the Phase 9 contract tests. Rename only the Java record components and preserve the existing JSON field names with `@JsonProperty`.
 
-### 9.3 修正内容
+### 9.3 Required Changes
 
-1. `LoginResponse` を変更する。
+1. Update `LoginResponse`:
 
 ```java
 public record LoginResponse(
-		@JsonProperty("success") boolean isSuccess,
-		String token,
-		AdminUserDto user
+   @JsonProperty("success") boolean isSuccess,
+   String token,
+   AdminUserDto user
 ) {
 }
 ```
 
-2. `AuthMeResponse` を変更する。
+1. Update `AuthMeResponse`:
 
 ```java
 public record AuthMeResponse(
-		@JsonProperty("authenticated") boolean isAuthenticated,
-		AdminUserDto user
+   @JsonProperty("authenticated") boolean isAuthenticated,
+   AdminUserDto user
 ) {
 }
 ```
 
-3. `ProductSearchResponse` を変更する。
+1. Update `ProductSearchResponse`:
 
 ```java
 public record ProductSearchResponse(
-		List<ProductDto> items,
-		long totalCount,
-		@JsonProperty("zeroHitRecorded") boolean hasZeroHitRecorded
+   List<ProductDto> items,
+   long totalCount,
+   @JsonProperty("zeroHitRecorded") boolean hasZeroHitRecorded
 ) {
 }
 ```
 
-4. Java tests の accessor 呼び出しを更新する。
+1. Update Java test calls to record accessors:
    - `success()` -> `isSuccess()`
    - `authenticated()` -> `isAuthenticated()`
    - `zeroHitRecorded()` -> `hasZeroHitRecorded()`
-5. JSON contract tests は既存 field 名を維持していることを確認する。
+1. Verify through JSON contract tests that the existing field names remain unchanged:
    - `$.success`
    - `$.authenticated`
    - `$.zeroHitRecorded`
-6. frontend TypeScript DTO は変更しない。
+1. Do not change the frontend TypeScript DTOs.
 
-### 9.4 確認方法
+### 9.4 Validation
 
-- `./mvnw verify`
-- `FrontendContractIntegrationTests` が成功すること。
-- `npm run typecheck`
-- `npm test`
+- Run `./mvnw verify`.
+- Verify that `FrontendContractIntegrationTests` succeeds.
+- Run `npm run typecheck`.
+- Run `npm test`.
 
-## 10. 実装順序
+## 10. Implementation Order
 
-### Step 1: Placeholder / seed image 修正
+### Step 1: Replace Placeholder and Seed-Image Artifacts
 
-理由: Critical finding であり、API contract への影響が小さい。
+Reason: This is a Critical finding with minimal API contract impact.
 
-作業:
+Tasks:
 
-- `ProductDto` Javadoc 修正
-- seed `image_url` 修正
-- frontend public image assets 追加または既存 asset 名更新
-- product component tests の必要箇所更新
+- Update the `ProductDto` Javadoc.
+- Update seed-data `image_url` values.
+- Add frontend public image assets or rename existing assets.
+- Update affected product component tests.
 
-確認:
+Validation:
 
-- `rg -n "sample|placeholder" backend/src/main backend/src/main/resources`
-- backend verify
-- frontend build
+- Run `rg -n "sample|placeholder" backend/src/main backend/src/main/resources`.
+- Run backend verification.
+- Run the frontend build.
 
-### Step 2: Boolean DTO naming 修正
+### Step 2: Correct Boolean DTO Naming
 
-理由: JSON contract を壊さないように慎重に進める必要がある。
+Reason: This change requires care to avoid breaking the JSON contract.
 
-作業:
+Tasks:
 
-- `@JsonProperty` を使って Java component name と JSON field name を分離
-- tests accessor 更新
-- frontend contract unchanged を確認
+- Use `@JsonProperty` to separate Java component names from JSON field names.
+- Update test accessor calls.
+- Confirm that the frontend contract remains unchanged.
 
-確認:
+Validation:
 
-- `./mvnw verify`
-- `npm run typecheck`
-- `npm test`
+- Run `./mvnw verify`.
+- Run `npm run typecheck`.
+- Run `npm test`.
 
-### Step 3: Nullability annotation 追加
+### Step 3: Add Nullability Annotations
 
-理由: interface 導入時に method signature へ同時反映しやすい。
+Reason: The same annotations can be incorporated into method signatures when introducing interfaces.
 
-作業:
+Tasks:
 
-- nullable parameters に `@Nullable`
-- 必要なら package-level `@NonNullApi`
+- Add `@Nullable` to nullable parameters.
+- Add package-level `@NonNullApi` if appropriate.
 
-確認:
+Validation:
 
-- compile
-- verify
+- Compile the backend.
+- Run backend verification.
 
-### Step 4: Service use-case interfaces 導入
+### Step 4: Introduce Service Use-Case Interfaces
 
-理由: Nullability annotation と method contract を揃えて境界を整理する。
+Reason: This step aligns nullability annotations and method contracts while clarifying application boundaries.
 
-作業:
+Tasks:
 
-- use-case interfaces 追加
-- services implement interfaces
-- controllers/filter inject interfaces
+- Add use-case interfaces.
+- Make service classes implement those interfaces.
+- Inject interfaces into controllers and the security filter.
 
-確認:
+Validation:
 
-- Spring context load
-- all controller integration tests
+- Run the Spring context load test.
+- Run all controller integration tests.
 
-### Step 5: Package rename
+### Step 5: Rename the Package Namespace
 
-理由: 変更量が大きく、他修正と混ざると原因特定が難しいため後半で単独実施する。
+Reason: This is a large mechanical change. Performing it separately later in the sequence makes failures easier to isolate.
 
-作業:
+Tasks:
 
-- groupId and package declarations
-- directory move
-- imports
-- docs references
+- Update the Maven `groupId` and Java package declarations.
+- Move package directories.
+- Update imports.
+- Update documentation references.
 
-確認:
+Validation:
 
-- `rg -n "com\\.codexskishop" backend`
-- `./mvnw verify`
-- Docker build
+- Run `rg -n "com\\.codexskishop" backend`.
+- Run `./mvnw verify`.
+- Run the Docker build.
 
-### Step 6: Spring Boot baseline alignment
+### Step 6: Align with the Spring Boot Baseline
 
-理由: 互換性リスクが最も大きい。先にコード品質の明確な修正を終えてから、dependency 変更を単独で検証する。
+Reason: This step has the highest compatibility risk. Complete the unambiguous code-quality changes first, then validate dependency changes in isolation.
 
-作業:
+Tasks:
 
-- parent version 3.2.x へ変更
-- dependency compatibility check
-- 必要なら Spring AI version 調整
-- 失敗時は standards exception 文書を作成
+- Change the parent version to Spring Boot 3.2.x.
+- Check dependency compatibility.
+- Adjust the Spring AI version if required.
+- If alignment is unsuccessful, create the standards exception document.
 
-確認:
+Validation:
 
-- dependency resolution
-- compile
-- verify
-- Docker compose smoke
+- Resolve dependencies.
+- Compile the backend.
+- Run backend verification.
+- Run the Docker Compose smoke test.
 
-## 11. テスト計画
+## 11. Test Plan
 
 Backend:
 
@@ -530,36 +530,36 @@ curl "http://localhost:8080/api/products?limit=3"
 docker compose --env-file .env.example down -v
 ```
 
-Manual/browser:
+Manual browser validation:
 
-- `http://localhost:3000`
-- existing product search
-- zero-result search
-- admin login
-- Zero Hit Radar dashboard
-- AI fallback consultation
-- browser console / network CORS error check
+- Open `http://localhost:3000`.
+- Search for an existing product.
+- Perform a search that returns zero results.
+- Log in as an administrator.
+- Open the Zero Hit Radar dashboard.
+- Submit an AI fallback consultation.
+- Check the browser console and network panel for CORS errors.
 
-## 12. 完了判定
+## 12. Completion Criteria
 
-修正完了条件:
+The remediation is complete when all of the following conditions are met:
 
-- check-report の Critical / High / Medium finding がすべて解消されている。
-- `rg -n "sample|placeholder" backend/src/main backend/src/main/resources` で未完成 artifact が検出されない。
-- `rg -n "com\\.codexskishop" backend` が 0 件、または承認済み例外文書が存在する。
-- Controller / filter が service interface に依存している。
-- nullable public/helper contract に annotation が付いている。
-- boolean DTO の Java component が prefix 付きで、JSON field は frontend contract を維持している。
-- backend `./mvnw verify` が成功する。
-- frontend lint/typecheck/test/build/e2e が成功する。
-- full-stack Docker Compose が起動し、主要 journey が通る。
-- Spring Boot 3.2.x alignment が成功するか、3.5.8 採用の標準例外が承認・文書化されている。
+- All Critical, High, and Medium findings in the check report are resolved.
+- `rg -n "sample|placeholder" backend/src/main backend/src/main/resources` finds no incomplete artifacts.
+- `rg -n "com\\.codexskishop" backend` returns no matches, or an approved standards exception document exists.
+- Controllers and the security filter depend on service interfaces.
+- Nullable public and helper contracts have explicit annotations.
+- Java boolean DTO components use prefixes while JSON fields preserve the frontend contract.
+- Backend `./mvnw verify` succeeds.
+- Frontend linting, type checking, tests, build, and E2E tests succeed.
+- The full stack starts with Docker Compose and all primary user journeys work.
+- Alignment with Spring Boot 3.2.x succeeds, or the standards exception for retaining 3.5.8 is approved and documented.
 
-## 13. リスクと注意点
+## 13. Risks and Important Considerations
 
-- Spring Boot 3.2.x への downgrade は依存互換性リスクがあるため、最後に単独で行う。
-- Boolean record component rename は Java accessor 名を変えるため、Java tests と service code の参照漏れに注意する。
-- JSON field 名は変更しない。frontend contract を破壊しないため、`@JsonProperty` を必ず付ける。
-- Package rename は機械的変更量が大きい。途中で他の refactor を混ぜない。
-- Seed image path の変更は frontend static asset と同時に確認する。
-- 実秘密情報は追加しない。demo credential は `.env.example` と README に sample として明記する。
+- Downgrading to Spring Boot 3.2.x introduces dependency compatibility risk and must be performed last as an isolated change.
+- Renaming boolean record components changes Java accessor names. Carefully update all references in Java tests and service code.
+- Do not change JSON field names. Always use `@JsonProperty` to preserve the frontend contract.
+- The package rename affects many files mechanically. Do not mix unrelated refactoring into that change.
+- Validate seed image path changes together with the frontend static assets.
+- Do not add real secrets. Clearly identify demo credentials as sample values in `.env.example` and the README.

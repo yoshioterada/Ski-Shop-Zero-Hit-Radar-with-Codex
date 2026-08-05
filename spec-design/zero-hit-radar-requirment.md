@@ -1,354 +1,354 @@
-# Zero Hit Radar 要件定義書
+# Zero Hit Radar Requirements Specification
 
-## 1. 目的
+## 1. Purpose
 
-本システムは、`Codex Ski Shop` という名称の Ski Shop Web サイトにおいて、商品検索で検索結果が 0 件となったキーワードを記録し、管理者が「Zero Hit Radar」として新規需要を発見できるようにする Web アプリケーションである。
+This system is a web application for a ski shop website named `Codex Ski Shop`. It records keywords for which product searches return zero results and enables administrators to discover new demand through the "Zero Hit Radar."
 
-4時間以内で実装可能な MVP として、スキーショップの全機能を作り込むのではなく、一般ユーザ向けの商品閲覧・検索機能と、管理者向けの Zero Hit Radar 確認・AI 相談機能に絞って構築する。
+As an MVP that can be implemented within four hours, the system will not implement every ski shop feature. It will focus on product browsing and search features for general users, and Zero Hit Radar review and AI consultation features for administrators.
 
-## 2. 背景
+## 2. Background
 
-EC サイトでは、ユーザが検索したにもかかわらず商品が見つからないキーワードは、潜在的な需要や在庫改善のヒントになる。本システムでは、検索結果が 0 件だったキーワードを蓄積し、管理者が検索回数や発生日を確認できるようにすることで、商品企画・仕入れ判断・顧客ニーズ把握を支援する。
+On an e-commerce site, keywords that users search for but cannot find can indicate latent demand and opportunities to improve inventory. This system stores keywords that returned zero search results and allows administrators to review search counts and occurrence dates, supporting product planning, purchasing decisions, and understanding customer needs.
 
-## 3. サービスコンセプト
+## 3. Service Concept
 
-`Codex Ski Shop` は、一般ユーザには「欲しいスキー用品をすばやく探せるショップ」として、管理者には「見逃していた需要を発見できる分析サービス」として提供する。
+`Codex Ski Shop` is provided to general users as "a shop where they can quickly find the ski equipment they want" and to administrators as "an analytics service that discovers previously overlooked demand."
 
-Zero Hit Radar は単なる 0 件検索ログ一覧ではなく、以下の価値を提供する。
+Zero Hit Radar is not merely a list of zero-result search logs. It provides the following value:
 
-- 顧客が探したが見つからなかった商品・ブランド・カテゴリを可視化する
-- 検索回数や最終検索日時から、需要の強さと鮮度を判断できる
-- AI 相談により、仕入れ候補、代替商品、ビジネス判断の観点を得られる
-- 管理者が次に取るべきアクションを短時間で判断できる
+- Visualize products, brands, and categories that customers searched for but could not find
+- Assess demand strength and recency based on search count and last search date and time
+- Obtain perspectives on purchasing candidates, alternative products, and business decisions through AI consultation
+- Enable administrators to determine the next action quickly
 
-### 3.1 成功指標
+### 3.1 Success Metrics
 
-MVP では以下を成功指標とする。
+The following are the MVP success metrics:
 
-- 一般ユーザが商品検索を自然に利用できる
-- Zero Hit キーワードが漏れなく記録される
-- 管理者が Zero Hit キーワードの優先度を一目で判断できる
-- AI 相談により、仕入れ検討に使える具体的な示唆が得られる
-- Docker compose 起動後、追加設定なしで基本デモが成立する
+- General users can use product search naturally
+- Zero Hit keywords are recorded without omissions
+- Administrators can determine the priority of Zero Hit keywords at a glance
+- AI consultation provides specific insights that can be used to evaluate purchasing
+- The basic demo works without additional configuration after Docker compose starts
 
-## 4. スコープ
+## 4. Scope
 
-### 4.1 対象範囲
+### 4.1 In Scope
 
-- 一般ユーザ向けトップページ
-- 商品一覧の初期表示
-- 商品検索
-- 検索結果が 0 件だったキーワードの記録
-- ログイン画面
-- 管理者ログイン後の管理画面遷移
-- 管理者向け Zero Hit Radar 表示
-- 管理者向け AI 相談機能
-- PostgreSQL への商品データおよび Zero Hit データ永続化
-- 実在するスキーメーカーと実在する商品名をもとにしたサンプル商品データ 100 件の初期登録
-- Next.js フロントエンド
-- Java 21 Spring Boot バックエンド
-- Docker マルチステージビルド
-- docker compose による一括起動
+- Home page for general users
+- Initial display of the product list
+- Product search
+- Recording keywords for which search results were zero
+- Login page
+- Navigation to the administration screen after administrator login
+- Zero Hit Radar display for administrators
+- AI consultation feature for administrators
+- Persistence of product data and Zero Hit data in PostgreSQL
+- Initial registration of 100 sample products based on real ski manufacturers and real product names
+- Next.js frontend
+- Java 21 Spring Boot backend
+- Docker multi-stage builds
+- Unified startup through docker compose
 
-### 4.2 対象外
+### 4.2 Out of Scope
 
-- ユーザ登録
-- 商品購入
-- カート
-- 決済
-- 在庫管理の本格実装
-- 商品管理 CRUD
-- 管理者の権限管理
-- 本格的な認可制御
-- メール通知
-- 外部 EC 連携
-- 本番運用向け監視・ログ基盤
-- AI 回答の永続化
+- User registration
+- Product purchases
+- Shopping cart
+- Payment processing
+- Full inventory management implementation
+- Product management CRUD
+- Administrator permission management
+- Full authorization controls
+- Email notifications
+- External e-commerce integrations
+- Production monitoring and logging infrastructure
+- Persistence of AI responses
 
-## 5. 想定ユーザ
+## 5. Target Users
 
-### 5.1 一般ユーザ
+### 5.1 General Users
 
-スキー用品を探している訪問者。トップページで商品を確認し、検索フォームから欲しい商品を検索する。
+Visitors looking for ski equipment. They review products on the home page and search for desired products through the search form.
 
-### 5.2 管理者
+### 5.2 Administrators
 
-Ski Shop の運営担当者。ログイン後に管理画面へ遷移し、検索結果が 0 件だったキーワードを確認する。必要に応じて AI に相談し、新規商品の仕入れや商品展開の判断材料を得る。
+Ski Shop operations staff. After login, they navigate to the administration screen and review keywords that returned zero search results. As needed, they consult the AI and obtain information for decisions about purchasing new products and expanding product offerings.
 
-## 6. ユーザージャーニー
+## 6. User Journeys
 
-### 6.1 一般ユーザ
+### 6.1 General User
 
-1. `Codex Ski Shop` のトップページにアクセスする
-2. 商品一覧または検索フィールドからスキー用品を探す
-3. 検索結果がある場合、商品カードでメーカー、商品名、価格、在庫状態を確認する
-4. 検索結果がない場合、0 件であることを理解し、別キーワードで検索できる
+1. Access the `Codex Ski Shop` home page
+2. Look for ski equipment in the product list or search field
+3. When search results exist, review the manufacturer, product name, price, and stock status on product cards
+4. When no search results exist, understand that there are zero results and search with another keyword
 
-### 6.2 管理者
+### 6.2 Administrator
 
-1. ログインページから管理者としてログインする
-2. Zero Hit Radar ダッシュボードで需要候補を確認する
-3. 検索回数、最終検索日時、推定機会損失、AI 推奨度から優先度を判断する
-4. 気になるキーワードについて AI に相談する
-5. 仕入れ候補、代替商品、注意点を確認し、次の検討につなげる
+1. Log in as an administrator from the login page
+2. Review demand candidates on the Zero Hit Radar dashboard
+3. Determine priority based on search count, last search date and time, estimated opportunity loss, and AI recommendation level
+4. Consult the AI about keywords of interest
+5. Review purchasing candidates, alternative products, and cautions, and use them in subsequent evaluation
 
-## 7. システム構成
+## 7. System Architecture
 
-### 7.1 全体構成
+### 7.1 Overall Architecture
 
 - Frontend: Next.js
 - Backend: Java 21 / Spring Boot
 - Database: PostgreSQL
 - Runtime: Docker / docker compose
 
-### 7.2 コンテナ構成
+### 7.2 Container Architecture
 
-docker compose で以下のサービスを起動する。
+Start the following services with docker compose:
 
-- `frontend`: Next.js アプリケーション
-- `backend`: Spring Boot API サーバ
+- `frontend`: Next.js application
+- `backend`: Spring Boot API server
 - `db`: PostgreSQL
 
-### 7.3 通信
+### 7.3 Communication
 
-- ブラウザは Next.js フロントエンドへアクセスする
-- Next.js は Spring Boot バックエンド API を呼び出す
-- Spring Boot は PostgreSQL に接続し、商品データと Zero Hit データを永続化する
+- The browser accesses the Next.js frontend
+- Next.js calls the Spring Boot backend API
+- Spring Boot connects to PostgreSQL and persists product data and Zero Hit data
 
-## 8. 画面要件
+## 8. Screen Requirements
 
-### 8.1 トップページ
+### 8.1 Home Page
 
-#### 目的
+#### Home Page Purpose
 
-一般ユーザに対して `Codex Ski Shop` という Ski Shop であることを明示し、商品閲覧と検索を行えるようにする。
+Clearly identify the site to general users as the `Codex Ski Shop` ski shop and enable product browsing and search.
 
-#### 表示要素
+#### Home Page Display Elements
 
-- `Codex Ski Shop` であることが分かるヘッダーまたはタイトル
-- ホーム、全商品、ログインへのナビゲーション
-- 管理者ログイン後は管理画面へ移動できる導線
-- 商品検索フィールド
-- 検索ボタン
-- スキーショップらしいヒーローエリア
-- 商品一覧
-- 初期表示として商品 20 件
-- 検索結果件数または検索状態が分かる表示
+- A header or title that identifies the site as `Codex Ski Shop`
+- Navigation to Home, All Products, and Login
+- A navigation path to the administration screen after administrator login
+- Product search field
+- Search button
+- A hero area appropriate for a ski shop
+- Product list
+- 20 products in the initial display
+- A display that communicates the search result count or search state
 
-#### デザイン参照
+#### Home Page Design References
 
-- トップページおよびログイン後トップページの画面イメージは `images/Top-page-after-login.png` を参考にする
-- 商品一覧の画面イメージは `images/products-list.png` を参考にする
-- 参考画像内の `Azure SkiShop` 表記は `Codex Ski Shop` に置き換える
-- 参考画像の雰囲気を踏まえ、スキーショップらしい清潔感、商品を探しやすい余白、検索しやすい導線を持つ UI とする
-- 青を基調にしつつ、商品カード、検索ボックス、カテゴリフィルタ、ナビゲーションが視認しやすい構成にする
-- 参考画像に含まれる一般ユーザ向け AI アドバイザー導線は、MVP では任意実装とし、必須機能は管理者向け AI 相談とする
+- Use `images/Top-page-after-login.png` as a reference for the home page and the home page after login
+- Use `images/products-list.png` as a reference for the product list screen
+- Replace the `Azure SkiShop` text in the reference images with `Codex Ski Shop`
+- Based on the character of the reference images, provide a UI with the clean appearance expected of a ski shop, sufficient whitespace for finding products, and an easy-to-use search path
+- Use blue as the primary color while ensuring product cards, the search box, category filters, and navigation are easy to see
+- The general-user AI advisor path shown in the reference images is optional for the MVP; the required feature is AI consultation for administrators
 
-#### 動作
+#### Home Page Behavior
 
-- 初期表示時、商品を最大 20 件表示する
-- 検索フィールドにキーワードを入力して検索できる
-- カテゴリで絞り込みできることが望ましい
-- 商品一覧を新着順または価格順で並び替えできることが望ましい
-- 検索結果が存在する場合、一致した商品を表示する
-- 検索結果が 0 件の場合、画面上で検索結果がないことを分かりやすく表示する
-- 検索結果が 0 件の場合、バックエンドに Zero Hit キーワードとして記録する
+- Display up to 20 products on initial load
+- Allow users to enter a keyword in the search field and search
+- Category filtering is desirable
+- Sorting the product list by newest or price is desirable
+- When search results exist, display the matching products
+- When search results are zero, clearly indicate on the screen that no search results exist
+- When search results are zero, record the keyword in the backend as a Zero Hit keyword
 
-### 8.2 ログインページ
+### 8.2 Login Page
 
-#### 目的
+#### Login Page Purpose
 
-管理者が管理画面へアクセスするための入口を提供する。
+Provide an entry point for administrators to access the administration screen.
 
-#### 表示要素
+#### Login Page Display Elements
 
-- ログイン ID 入力欄
-- パスワード入力欄
-- ログインボタン
-- エラーメッセージ表示領域
+- Login ID input
+- Password input
+- Login button
+- Error message display area
 
-#### デザイン参照
+#### Login Page Design References
 
-- ログインページの画面イメージは `images/login-screen.png` を参考にする
-- `Codex Ski Shop` の管理者ログイン画面であることが分かるタイトルまたはブランド表示を配置する
-- 参考画像内の `Azure SkiShop` 表記は `Codex Ski Shop` に置き換える
+- Use `images/login-screen.png` as a reference for the login page
+- Place a title or brand display that identifies the page as the `Codex Ski Shop` administrator login screen
+- Replace the `Azure SkiShop` text in the reference image with `Codex Ski Shop`
 
-#### 動作
+#### Login Page Behavior
 
-- 管理者アカウントでログインできる
-- ログイン成功時、管理画面へ遷移する
-- ログイン失敗時、エラーメッセージを表示する
+- Allow login with an administrator account
+- Navigate to the administration screen after successful login
+- Display an error message after failed login
 
-#### MVP 方針
+#### MVP Policy
 
-4時間での実装を優先し、管理者アカウントは環境変数またはバックエンド側の固定値で管理してよい。ただし、認証情報はソースコード上に平文で固定しないことが望ましい。
+To prioritize implementation within four hours, the administrator account may be managed through environment variables or fixed values on the backend. However, credentials should not be hard-coded in plaintext in the source code.
 
-### 8.3 管理画面
+### 8.3 Administration Screen
 
-#### 目的
+#### Administration Screen Purpose
 
-管理者が Zero Hit Radar を確認し、潜在需要を発見できるようにする。
+Enable administrators to review Zero Hit Radar and discover latent demand.
 
-#### 表示要素
+#### Administration Screen Display Elements
 
-- 管理画面ヘッダー
-- Zero Hit Radar 一覧
-- 検索キーワード
-- 検索回数
-- 初回検索日時
-- 最終検索日時
-- 対象期間フィルタ
-- 更新ボタン
-- 推定機会損失
-- AI 推奨度または優先度
-- 仕入れ候補ブランド・商品案
-- AI 相談フォーム
-- AI 回答表示領域
+- Administration screen header
+- Zero Hit Radar list
+- Search keyword
+- Search count
+- First search date and time
+- Last search date and time
+- Date-range filter
+- Refresh button
+- Estimated opportunity loss
+- AI recommendation level or priority
+- Candidate brands and product ideas for purchasing
+- AI consultation form
+- AI response display area
 
-#### デザイン参照
+#### Administration Screen Design References
 
-- 管理画面および Zero Hit Radar の画面イメージは `images/admin-dash-board-zero-hit.png` を参考にする
-- Zero Hit の件数、検索回数、最終検索日時が管理者にとってすぐ把握できるダッシュボード UI とする
-- サイドナビゲーション、分析カード、空状態、AI 質問パネルの構成は参考画像の雰囲気を踏まえる
+- Use `images/admin-dash-board-zero-hit.png` as a reference for the administration screen and Zero Hit Radar
+- Provide a dashboard UI that enables administrators to understand the Zero Hit count, search count, and last search date and time immediately
+- Base the side navigation, analytics cards, empty state, and AI question panel structure on the character of the reference image
 
-#### 動作
+#### Administration Screen Behavior
 
-- ログイン済み管理者のみアクセスできる
-- Zero Hit キーワードを検索回数の多い順、または最終検索日時の新しい順で表示する
-- 期間フィルタにより、直近 7 日、30 日、90 日の Zero Hit を確認できることが望ましい
-- Zero Hit がない場合も、空状態として「ゼロヒット機会は検出されませんでした」のように自然な表示を行う
-- 管理者は Zero Hit キーワードに関して AI に相談できる
-- AI 相談では、該当商品に関する詳細情報、仕入れ判断、新規需要としての見込み、ビジネス観点の助言を得られる
+- Allow access only to authenticated administrators
+- Display Zero Hit keywords in descending search-count order or descending last-search-date order
+- It is desirable to use a date-range filter to review Zero Hits from the last 7, 30, or 90 days
+- When there are no Zero Hits, display a natural empty-state message such as "No zero-hit opportunities were detected"
+- Allow administrators to consult the AI about Zero Hit keywords
+- AI consultation provides detailed information about the relevant product, purchasing guidance, potential as new demand, and business-oriented advice
 
-## 9. 機能要件
+## 9. Functional Requirements
 
-### 9.1 商品一覧表示
+### 9.1 Product List Display
 
-- システムは商品データを PostgreSQL に保持する
-- トップページ初期表示では商品を最大 20 件取得する
-- 商品には少なくとも以下の情報を持たせる
-  - 商品 ID
-  - メーカー名
-  - 商品名
-  - カテゴリ
-  - 説明
-  - 価格
-  - 在庫状態
-  - 画像 URL または画像プレースホルダー
+- The system stores product data in PostgreSQL
+- Retrieve up to 20 products for the initial home page display
+- Each product must contain at least the following information:
+  - Product ID
+  - Manufacturer name
+  - Product name
+  - Category
+  - Description
+  - Price
+  - Stock status
+  - Image URL or image placeholder
 
-### 9.2 商品検索
+### 9.2 Product Search
 
-- ユーザはキーワードで商品を検索できる
-- 商品名、メーカー名、カテゴリ、説明のいずれかにキーワードが含まれる商品を検索対象とする
-- 大文字・小文字の違いは検索結果に影響しないことが望ましい
-- 日本語、英数字、ブランド名、型番の検索に対応する
-- 検索キーワードは前後空白を除去する
-- 空文字検索の場合は Zero Hit として記録せず、初期商品一覧またはエラーにならない自然な状態を表示する
-- 検索結果が 1 件以上の場合、該当商品を一覧表示する
-- 検索結果が 0 件の場合、Zero Hit として記録する
+- Users can search for products by keyword
+- Products are eligible for matching when the keyword is contained in the product name, manufacturer name, category, or description
+- Case differences should not affect search results
+- Support searches in Japanese, alphanumeric characters, brand names, and model numbers
+- Trim leading and trailing whitespace from search keywords
+- For an empty-string search, do not record a Zero Hit; display the initial product list or another natural state that does not produce an error
+- When one or more search results exist, display the matching products in a list
+- When search results are zero, record a Zero Hit
 
-### 9.3 Zero Hit 記録
+### 9.3 Zero Hit Recording
 
-- 検索結果が 0 件だったキーワードを記録する
-- 同一キーワードが再度 Zero Hit になった場合は、新規レコードを増やすのではなく検索回数を加算する
-- キーワードの前後空白は除去する
-- 空文字は Zero Hit として記録しない
-- 大文字・小文字違いや不要な連続空白は、可能な範囲で同一キーワードとして扱う
-- 記録項目は以下とする
+- Record keywords for which search results were zero
+- When the same keyword produces another Zero Hit, increment the search count instead of adding a new record
+- Trim leading and trailing whitespace from keywords
+- Do not record empty strings as Zero Hits
+- Treat case differences and unnecessary consecutive whitespace as the same keyword where practical
+- Record the following fields:
   - Zero Hit ID
-  - キーワード
-  - 正規化キーワード
-  - 検索回数
-  - 優先度
-  - 初回検索日時
-  - 最終検索日時
-- 将来的な分析に備え、MVP で無理なく実装できる場合は検索日時ごとのイベント記録も検討する
+  - Keyword
+  - Normalized keyword
+  - Search count
+  - Priority
+  - First search date and time
+  - Last search date and time
+- In preparation for future analytics, consider recording an event for each search date and time if this can be implemented reasonably within the MVP
 
-### 9.4 Zero Hit 分析
+### 9.4 Zero Hit Analytics
 
-- 管理画面では Zero Hit キーワードをビジネス判断しやすい形で表示する
-- 検索回数が多いキーワードを上位に表示できる
-- 最終検索日時が新しいキーワードを上位に表示できる
-- 推定機会損失は、簡易的に `検索回数 × 想定平均単価` で算出してよい
-- 想定平均単価は固定値、カテゴリ平均価格、または全商品の平均価格を利用してよい
-- 優先度は、検索回数、最終検索日時、推定機会損失をもとに `HIGH`、`MEDIUM`、`LOW` などで表示してよい
-- AI 推奨度は、MVP では AI 回答内の定性的評価として表示してよい
-- 表示する指標は、ゼロヒット件数、検索ボリューム、推定機会損失を基本とする
+- Display Zero Hit keywords on the administration screen in a form that supports business decisions
+- Support ranking keywords with high search counts first
+- Support ranking keywords with recent last-search dates first
+- Estimated opportunity loss may be calculated simply as `search count × assumed average unit price`
+- The assumed average unit price may use a fixed value, average category price, or average price across all products
+- Priority may be displayed as `HIGH`, `MEDIUM`, `LOW`, or similar based on search count, last search date and time, and estimated opportunity loss
+- For the MVP, the AI recommendation level may be displayed as a qualitative assessment within the AI response
+- The primary displayed metrics are Zero Hit count, search volume, and estimated opportunity loss
 
-### 9.5 管理者ログイン
+### 9.5 Administrator Login
 
-- 管理者はログインページからログインできる
-- ログイン成功後は管理画面へ遷移する
-- 未ログイン状態で管理画面にアクセスした場合はログインページへ誘導する
-- MVP では簡易的なセッションまたはトークン方式で実装してよい
+- Administrators can log in from the login page
+- Navigate to the administration screen after successful login
+- When an unauthenticated user accesses the administration screen, direct the user to the login page
+- A simple session-based or token-based implementation is acceptable for the MVP
 
-### 9.6 Zero Hit Radar 表示
+### 9.6 Zero Hit Radar Display
 
-- 管理者は Zero Hit 一覧を確認できる
-- 一覧は検索回数、初回検索日時、最終検索日時を表示する
-- 検索回数が多いキーワードが管理者にとって目立つように表示されること
-- 需要候補として判断しやすいよう、キーワードごとに推定機会損失または優先度を表示することが望ましい
-- キーワードを選択すると、AI 相談フォームにキーワードを引き継げることが望ましい
-- データが存在しない場合は、空状態として分かりやすく表示する
+- Administrators can review the Zero Hit list
+- The list displays search count, first search date and time, and last search date and time
+- Keywords with high search counts must be visually prominent to administrators
+- It is desirable to display estimated opportunity loss or priority for each keyword so that it can be assessed as a demand candidate
+- It is desirable to populate the AI consultation form with a selected keyword
+- When no data exists, display a clear empty state
 
-### 9.7 AI 相談機能
+### 9.7 AI Consultation Feature
 
-- 管理者は Zero Hit キーワードまたは任意の相談文を入力し、AI に問い合わせできる
-- AI には以下の観点で回答を求める
-  - その商品またはキーワードが示す需要の可能性
-  - スキーショップで扱うべき商品の候補
-  - 在庫として抱えるべきかの判断材料
-  - 仕入れ時の注意点
-  - 関連商品や代替商品の提案
-- AI 相談には、可能な範囲で Zero Hit キーワード、検索回数、最終検索日時、既存商品カテゴリ、既存商品ブランドをコンテキストとして渡す
-- AI 回答は、結論、理由、仕入れ候補、注意点、次のアクションが分かる構成にする
-- AI API キーなどの秘匿情報は環境変数で管理する
-- AI API が未設定または通信失敗した場合でも、画面全体が壊れず、分かりやすいエラー表示を行う
+- Administrators can enter a Zero Hit keyword or arbitrary consultation text and submit an inquiry to the AI
+- Request AI responses from the following perspectives:
+  - Potential demand indicated by the product or keyword
+  - Candidate products that the ski shop should carry
+  - Information for deciding whether to hold the product in inventory
+  - Purchasing cautions
+  - Recommendations for related or alternative products
+- Where practical, provide the Zero Hit keyword, search count, last search date and time, existing product categories, and existing product brands to the AI as context
+- Structure AI responses so the conclusion, rationale, purchasing candidates, cautions, and next actions are clear
+- Manage secrets such as the AI API key through environment variables
+- If the AI API is not configured or communication fails, the entire screen must remain functional and display a clear error message
 
-## 10. API 要件
+## 10. API Requirements
 
-### 10.1 商品 API
+### 10.1 Product API
 
 #### `GET /api/products`
 
-初期表示用の商品一覧を取得する。
+Retrieve the product list for the initial display.
 
 Query Parameters:
 
-- `limit`: 取得件数。未指定時は 20。
-- `category`: 任意。カテゴリ絞り込み。
-- `sort`: 任意。`createdAt,desc`、`price,asc`、`price,desc` など。
+- `limit`: Number of items to retrieve. Defaults to 20 when omitted.
+- `category`: Optional. Category filter.
+- `sort`: Optional. Examples include `createdAt,desc`, `price,asc`, and `price,desc`.
 
 Response:
 
-- 商品一覧
-- 総件数
+- Product list
+- Total count
 
 #### `GET /api/products/search`
 
-キーワードで商品を検索する。
+Search for products by keyword.
 
 Query Parameters:
 
-- `q`: 検索キーワード
-- `category`: 任意。カテゴリ絞り込み。
-- `sort`: 任意。並び順。
+- `q`: Search keyword
+- `category`: Optional. Category filter.
+- `sort`: Optional. Sort order.
 
 Response:
 
-- 検索結果の商品一覧
-- 検索結果件数
-- Zero Hit 記録が発生したかどうか
+- List of products in the search results
+- Search result count
+- Whether Zero Hit recording occurred
 
-備考:
+Notes:
 
-- 検索結果が 0 件の場合、バックエンド側で Zero Hit を記録する
+- When search results are zero, record the Zero Hit on the backend
 
-### 10.2 認証 API
+### 10.2 Authentication API
 
 #### `POST /api/auth/login`
 
-管理者ログインを行う。
+Perform administrator login.
 
 Request:
 
@@ -357,47 +357,47 @@ Request:
 
 Response:
 
-- ログイン成功可否
-- 認証トークンまたはセッション情報
+- Whether login succeeded
+- Authentication token or session information
 
 #### `GET /api/auth/me`
 
-現在のログイン状態を確認する。
+Check the current login state.
 
 Response:
 
-- ログイン済みかどうか
-- 管理者ユーザ情報
+- Whether the user is logged in
+- Administrator user information
 
-### 10.3 管理者 API
+### 10.3 Administrator API
 
 #### `GET /api/admin/zero-hits`
 
-Zero Hit 一覧を取得する。
+Retrieve the Zero Hit list.
 
 Query Parameters:
 
-- `days`: 任意。対象期間。`7`、`30`、`90` など。
-- `sort`: 任意。`hitCount,desc`、`lastSearchedAt,desc` など。
-- `limit`: 任意。取得件数。
+- `days`: Optional. Target period. Examples include `7`, `30`, and `90`.
+- `sort`: Optional. Examples include `hitCount,desc` and `lastSearchedAt,desc`.
+- `limit`: Optional. Number of items to retrieve.
 
 Response:
 
-- Zero Hit キーワード一覧
-- 集計値
-  - ゼロヒット件数
-  - 検索ボリューム
-  - 推定機会損失
+- Zero Hit keyword list
+- Aggregate values
+  - Zero Hit count
+  - Search volume
+  - Estimated opportunity loss
 
-認証:
+Authentication:
 
-- 管理者ログイン済みであること
+- The user must be authenticated as an administrator
 
-### 10.4 AI 相談 API
+### 10.4 AI Consultation API
 
 #### `POST /api/admin/ai-consult`
 
-Zero Hit キーワードまたは相談文をもとに AI へ問い合わせる。
+Submit an inquiry to the AI based on a Zero Hit keyword or consultation text.
 
 Request:
 
@@ -408,75 +408,75 @@ Request:
 
 Response:
 
-- AI からの回答
-- 回答生成に失敗した場合のエラーメッセージ
+- Response from the AI
+- Error message when response generation fails
 
-認証:
+Authentication:
 
-- 管理者ログイン済みであること
+- The user must be authenticated as an administrator
 
-## 11. データ要件
+## 11. Data Requirements
 
-### 11.1 商品テーブル
+### 11.1 Products Table
 
 Table: `products`
 
 | Column | Type | Required | Description |
 | --- | --- | --- | --- |
-| `id` | UUID or BIGSERIAL | Yes | 商品 ID |
-| `manufacturer` | VARCHAR | Yes | メーカー名 |
-| `name` | VARCHAR | Yes | 商品名 |
-| `category` | VARCHAR | Yes | カテゴリ |
-| `description` | TEXT | Yes | 商品説明 |
-| `price` | NUMERIC | Yes | 価格 |
-| `stock_status` | VARCHAR | Yes | 在庫状態 |
-| `image_url` | TEXT | No | 商品画像 URL |
-| `created_at` | TIMESTAMP | Yes | 作成日時 |
-| `updated_at` | TIMESTAMP | Yes | 更新日時 |
+| `id` | UUID or BIGSERIAL | Yes | Product ID |
+| `manufacturer` | VARCHAR | Yes | Manufacturer name |
+| `name` | VARCHAR | Yes | Product name |
+| `category` | VARCHAR | Yes | Category |
+| `description` | TEXT | Yes | Product description |
+| `price` | NUMERIC | Yes | Price |
+| `stock_status` | VARCHAR | Yes | Stock status |
+| `image_url` | TEXT | No | Product image URL |
+| `created_at` | TIMESTAMP | Yes | Creation date and time |
+| `updated_at` | TIMESTAMP | Yes | Update date and time |
 
-### 11.2 Zero Hit テーブル
+### 11.2 Zero Hit Table
 
 Table: `zero_hit_searches`
 
 | Column | Type | Required | Description |
 | --- | --- | --- | --- |
 | `id` | UUID or BIGSERIAL | Yes | Zero Hit ID |
-| `keyword` | VARCHAR | Yes | 表示用キーワード |
-| `normalized_keyword` | VARCHAR | Yes | 重複判定用の正規化キーワード |
-| `hit_count` | INTEGER | Yes | 検索回数 |
-| `priority` | VARCHAR | Yes | 需要候補としての優先度 |
-| `estimated_opportunity_loss` | NUMERIC | No | 推定機会損失 |
-| `first_searched_at` | TIMESTAMP | Yes | 初回検索日時 |
-| `last_searched_at` | TIMESTAMP | Yes | 最終検索日時 |
+| `keyword` | VARCHAR | Yes | Display keyword |
+| `normalized_keyword` | VARCHAR | Yes | Normalized keyword used for duplicate detection |
+| `hit_count` | INTEGER | Yes | Search count |
+| `priority` | VARCHAR | Yes | Priority as a demand candidate |
+| `estimated_opportunity_loss` | NUMERIC | No | Estimated opportunity loss |
+| `first_searched_at` | TIMESTAMP | Yes | First search date and time |
+| `last_searched_at` | TIMESTAMP | Yes | Last search date and time |
 
-### 11.3 初期データ
+### 11.3 Initial Data
 
-- 商品データはデフォルトで 100 件用意し、アプリケーション起動時または DB 初期化時に PostgreSQL へ登録されるようにする
-- サンプル商品データは、実際に世の中に存在するスキーメーカーと実際の商品名をもとに作成する
-- 商品名、メーカー名、カテゴリが分かるデータにし、架空ブランドや明らかなダミー商品名のみで構成しない
-- 対象メーカー例として、Atomic、Salomon、Rossignol、HEAD、Fischer、Volkl、K2、Elan、Nordica、Tecnica、Lange、Dalbello、Marker、Look、Tyrolia、Smith、Oakley、POC、Giro、Swix などを含める
-- 対象カテゴリ例として、スキー板、スキーブーツ、ビンディング、ゴーグル、ヘルメット、ウェア、グローブ、ポール、ワックス、チューンナップ用品など、スキーショップらしさが伝わるカテゴリを含める
-- 初期表示では、この 100 件のうち最大 20 件を表示する
-- 商品価格はサンプルとして自然な範囲の日本円価格を設定する
-- 商品画像 URL が用意できない場合は、画面が壊れて見えないようにカテゴリ別のプレースホルダーまたはローカル画像を使用する
+- Provide 100 product records by default and register them in PostgreSQL at application startup or during database initialization
+- Create sample product data based on ski manufacturers and product names that actually exist in the market
+- Provide data that clearly identifies product name, manufacturer name, and category; do not compose the dataset solely of fictional brands or obviously dummy product names
+- Example target manufacturers include Atomic, Salomon, Rossignol, HEAD, Fischer, Volkl, K2, Elan, Nordica, Tecnica, Lange, Dalbello, Marker, Look, Tyrolia, Smith, Oakley, POC, Giro, and Swix
+- Example target categories include skis, ski boots, bindings, goggles, helmets, apparel, gloves, poles, wax, and tuning supplies, as well as other categories that communicate the character of a ski shop
+- Display up to 20 of these 100 records in the initial view
+- Set product prices to realistic sample prices in Japanese yen
+- If product image URLs are unavailable, use category-specific placeholders or local images so the screen does not appear broken
 
-## 12. ルーティング要件
+## 12. Routing Requirements
 
-### 12.1 フロントエンドルート
+### 12.1 Frontend Routes
 
-- `/`: トップページ
-- `/products`: 商品一覧ページ
-- `/login`: 管理者ログインページ
-- `/admin/dashboard`: 管理画面および Zero Hit Radar
+- `/`: Home page
+- `/products`: Product list page
+- `/login`: Administrator login page
+- `/admin/dashboard`: Administration screen and Zero Hit Radar
 
-### 12.2 API ルート
+### 12.2 API Routes
 
-- バックエンド API は `/api` 配下で提供する
-- フロントエンドからの API ベース URL は環境変数で切り替えられるようにする
+- Provide backend APIs under `/api`
+- Allow the API base URL used by the frontend to be changed through an environment variable
 
-## 13. 環境変数要件
+## 13. Environment Variable Requirements
 
-### 13.1 バックエンド
+### 13.1 Backend
 
 - `SPRING_DATASOURCE_URL`
 - `SPRING_DATASOURCE_USERNAME`
@@ -487,155 +487,155 @@ Table: `zero_hit_searches`
 - `AI_MODEL`
 - `CORS_ALLOWED_ORIGINS`
 
-### 13.2 フロントエンド
+### 13.2 Frontend
 
 - `NEXT_PUBLIC_API_BASE_URL`
 
-### 13.3 方針
+### 13.3 Policy
 
-- `.env.example` を用意し、必要な環境変数を確認できるようにする
-- 実際の秘匿情報を含む `.env` は Git 管理対象にしない
+- Provide `.env.example` so the required environment variables can be reviewed
+- Do not track a `.env` file containing actual secrets in Git
 
-## 14. 非機能要件
+## 14. Non-Functional Requirements
 
 ### 14.1 UX
 
-- 一般ユーザがトップページを見た瞬間に `Codex Ski Shop` であることが分かる
-- 検索、結果表示、0 件表示が直感的に理解できる
-- 管理画面は Zero Hit の重要度が分かりやすい
-- `images` ディレクトリ配下の参考画像をもとに、トップページ、ログインページ、商品一覧、管理画面の見た目を作成する
-- 未完成に見えるプレースホルダー文言や壊れたレイアウトを残さない
-- PC とモバイルの両方で表示が破綻しない
-- 読み込み中、検索中、AI 回答生成中、エラー、空状態がそれぞれ自然に表示される
-- ボタン、入力欄、カード、テーブルはクリック可能・入力可能な状態が分かりやすい
+- General users can immediately identify the site as `Codex Ski Shop` when viewing the home page
+- Search, result display, and zero-result display are intuitive
+- The importance of Zero Hits is clear on the administration screen
+- Create the appearance of the home page, login page, product list, and administration screen based on the reference images under the `images` directory
+- Do not leave placeholder text that makes the application appear incomplete or any broken layouts
+- Rendering must remain intact on both desktop and mobile
+- Loading, searching, AI response generation, error, and empty states are each displayed naturally
+- Buttons, inputs, cards, and tables clearly communicate when they are clickable or editable
 
-### 14.2 可読性
+### 14.2 Readability
 
-- 画面文言、コード、ディレクトリ構成が理解しやすいこと
-- フロントエンドとバックエンドの責務を分離すること
-- API の入出力が明確であること
-- README または起動手順を用意することが望ましい
+- Screen text, code, and directory structure must be easy to understand
+- Separate frontend and backend responsibilities
+- API inputs and outputs must be clear
+- Providing a README or startup instructions is desirable
 
-### 14.3 実行性
+### 14.3 Executability
 
-- `docker compose up --build` で PostgreSQL、バックエンド、フロントエンドを起動できる
-- 初期データ投入後、トップページで商品が表示される
-- 検索結果 0 件のキーワードが管理画面で確認できる
-- AI 相談機能は環境変数設定時に動作する
+- `docker compose up --build` starts PostgreSQL, the backend, and the frontend
+- Products appear on the home page after initial data is loaded
+- Keywords with zero search results can be reviewed on the administration screen
+- The AI consultation feature works when its environment variables are configured
 
-### 14.4 品質
+### 14.4 Quality
 
-- OSS として公開しても問題ない品質を目指す
-- 秘匿情報をコミットしない
-- 不要な生成物やローカル環境依存ファイルを含めない
-- エラー時に画面が壊れない
-- 主要機能に対して最低限のテストまたは手動検証手順を用意する
+- Target a level of quality suitable for publication as OSS
+- Do not commit secrets
+- Do not include unnecessary generated artifacts or files dependent on a local environment
+- The screen must not break when errors occur
+- Provide at least minimal tests or manual verification procedures for core features
 
-### 14.5 セキュリティ
+### 14.5 Security
 
-- 管理画面 API は未認証アクセスを拒否する
-- 管理者パスワードや AI API キーは環境変数で管理する
-- CORS は必要なオリジンに限定する
-- SQL インジェクションを避けるため、ORM またはパラメータ化クエリを使用する
+- Administration screen APIs reject unauthenticated access
+- Manage the administrator password and AI API key through environment variables
+- Restrict CORS to required origins
+- Use an ORM or parameterized queries to prevent SQL injection
 
-### 14.6 パフォーマンス
+### 14.6 Performance
 
-- 商品 100 件の初期データでは、検索と一覧表示が体感で遅くならないこと
-- 管理画面の Zero Hit 一覧は、MVP ではページングなしでもよいが、将来の拡張を考慮して API では `limit` を受け取れることが望ましい
-- AI 相談中は UI をブロックしすぎず、送信中状態を表示する
+- Search and list display must not feel slow with the initial dataset of 100 products
+- Pagination is not required for the MVP Zero Hit list on the administration screen, but it is desirable for the API to accept `limit` in preparation for future expansion
+- Do not block the UI excessively during AI consultation; display a submitting state
 
-## 15. 実装方針
+## 15. Implementation Policy
 
-### 15.1 フロントエンド
+### 15.1 Frontend
 
-- Next.js を使用する
-- トップページ、ログインページ、管理画面を実装する
-- API 呼び出しはバックエンドの REST API に接続する
-- 商品カードは画像、商品名、カテゴリ、価格、説明を表示する
-- Zero Hit Radar は一覧表または管理画面向けのリスト UI として表示する
-- 参考画像の UI を踏まえ、ナビゲーション、検索バー、商品カード、ダッシュボード、AI 質問パネルを統一感のあるデザインにする
+- Use Next.js
+- Implement the home page, login page, and administration screen
+- Connect API calls to the backend REST API
+- Product cards display the image, product name, category, price, and description
+- Display Zero Hit Radar as a table or list UI suitable for an administration screen
+- Based on the reference-image UI, provide a consistent design for navigation, the search bar, product cards, the dashboard, and the AI question panel
 
-### 15.2 バックエンド
+### 15.2 Backend
 
-- Java 21 / Spring Boot を使用する
-- REST API を提供する
-- Spring Data JPA などを利用して PostgreSQL と接続する
-- 商品検索処理と Zero Hit 記録処理をバックエンド側で実装する
-- 管理者 API は認証済みリクエストのみ許可する
+- Use Java 21 / Spring Boot
+- Provide REST APIs
+- Connect to PostgreSQL using Spring Data JPA or similar technology
+- Implement product search and Zero Hit recording on the backend
+- Allow only authenticated requests to access administrator APIs
 
-### 15.3 データベース
+### 15.3 Database
 
-- PostgreSQL を使用する
-- 初期商品データを投入する
-- マイグレーションは Flyway、Liquibase、または Spring Boot 初期化 SQL のいずれかで実装する
-- `normalized_keyword` にはユニーク制約を付与し、同一 Zero Hit の重複登録を防ぐことが望ましい
+- Use PostgreSQL
+- Load initial product data
+- Implement migrations using Flyway, Liquibase, or Spring Boot initialization SQL
+- It is desirable to add a unique constraint to `normalized_keyword` to prevent duplicate registration of the same Zero Hit
 
-### 15.4 AI 相談
+### 15.4 AI Consultation
 
-- バックエンドに AI 相談 API を実装する
-- AI プロバイダの API キーは環境変数から読み込む
-- 未設定時は明確なエラーを返す、またはデモ用のフォールバック回答を返す
-- 管理者画面では AI 相談中、成功、失敗の状態を分かりやすく表示する
-- AI へのプロンプトには、スキーショップの管理者向けに、仕入れ判断の観点で回答するよう指示する
+- Implement the AI consultation API in the backend
+- Read the AI provider API key from an environment variable
+- When the AI provider is not configured, return a clear error or a fallback response for the demo
+- Clearly display in-progress, success, and failure states for AI consultation on the administration screen
+- Instruct the AI through its prompt to answer from a purchasing-decision perspective for a ski shop administrator
 
-## 16. テスト要件
+## 16. Test Requirements
 
-### 16.1 バックエンド
+### 16.1 Backend
 
-- 商品一覧 API が商品を返すこと
-- 商品検索 API が一致商品を返すこと
-- 0 件検索時に Zero Hit が登録されること
-- 同一キーワードの 0 件検索時に `hit_count` が増えること
-- 管理者 API が未認証アクセスを拒否すること
+- Verify that the product list API returns products
+- Verify that the product search API returns matching products
+- Verify that a Zero Hit is registered when a search returns zero results
+- Verify that `hit_count` increases when the same keyword produces another zero-result search
+- Verify that administrator APIs reject unauthenticated access
 
-### 16.2 フロントエンド
+### 16.2 Frontend
 
-- トップページで商品が表示されること
-- 検索結果あり、検索結果なし、読み込み中、エラー状態が表示できること
-- ログイン成功後に管理画面へ遷移すること
-- Zero Hit Radar の一覧と空状態が表示できること
-- AI 相談の送信中、成功、失敗状態が表示できること
+- Verify that products appear on the home page
+- Verify that result-present, no-result, loading, and error states can be displayed
+- Verify navigation to the administration screen after successful login
+- Verify that the Zero Hit Radar list and empty state can be displayed
+- Verify that submitting, success, and failure states for AI consultation can be displayed
 
-### 16.3 手動検証
+### 16.3 Manual Verification
 
-- Docker compose 起動後、追加の手作業なしで基本デモが実行できること
-- PC 幅とモバイル幅で主要画面が破綻しないこと
+- Verify that the basic demo can run without additional manual work after Docker compose starts
+- Verify that core screens remain intact at desktop and mobile widths
 
-## 17. 受け入れ基準
+## 17. Acceptance Criteria
 
-### 17.1 一般ユーザ機能
+### 17.1 General User Features
 
-- トップページにアクセスすると `Codex Ski Shop` であることが分かる
-- 実在するスキーメーカーと実在する商品名をもとにしたサンプル商品データ 100 件が登録されている
-- 商品が 20 件表示される
-- 商品カードにメーカー名、商品名、価格、在庫状態が表示される
-- 検索キーワードを入力して商品検索できる
-- 一致する商品がある場合、検索結果が表示される
-- 一致する商品がない場合、0 件であることが表示される
+- Accessing the home page makes it clear that the site is `Codex Ski Shop`
+- 100 sample product records based on real ski manufacturers and real product names are registered
+- 20 products are displayed
+- Product cards display manufacturer name, product name, price, and stock status
+- Users can enter a search keyword and search for products
+- When matching products exist, search results are displayed
+- When no matching products exist, the screen indicates that there are zero results
 
 ### 17.2 Zero Hit Radar
 
-- 検索結果 0 件のキーワードが DB に保存される
-- 同一キーワードで再検索した場合、検索回数が増える
-- 管理者ログイン後、Zero Hit Radar 画面でキーワード、検索回数、初回検索日時、最終検索日時、推定機会損失を確認できる
-- 管理者が需要候補の優先度を判断できる見た目になっている
+- Keywords with zero search results are saved in the DB
+- Searching again with the same keyword increases the search count
+- After administrator login, the Zero Hit Radar screen displays keyword, search count, first search date and time, last search date and time, and estimated opportunity loss
+- The visual presentation enables administrators to determine the priority of demand candidates
 
-### 17.3 管理者機能
+### 17.3 Administrator Features
 
-- 管理者ログインに成功すると管理画面へ遷移する
-- 未ログイン状態では管理画面を直接表示できない
-- 管理者画面で AI 相談フォームを利用できる
-- Zero Hit キーワードを選んで AI 相談に使えることが望ましい
-- AI 設定が有効な場合、相談結果が画面に表示される
-- AI 設定が無効または失敗した場合、分かりやすいエラーが表示される
+- Successful administrator login navigates to the administration screen
+- The administration screen cannot be displayed directly while unauthenticated
+- The AI consultation form is available on the administration screen
+- It is desirable to select a Zero Hit keyword and use it for AI consultation
+- When AI configuration is enabled, consultation results are displayed on the screen
+- When AI configuration is disabled or the request fails, a clear error is displayed
 
-### 17.4 Docker 実行
+### 17.4 Docker Execution
 
-- `docker compose up --build` で全サービスが起動する
-- PostgreSQL、バックエンド、フロントエンドが接続される
-- ブラウザからトップページ、ログインページ、管理画面にアクセスできる
+- `docker compose up --build` starts all services
+- PostgreSQL, the backend, and the frontend are connected
+- The home page, login page, and administration screen are accessible from a browser
 
-## 18. 推奨ディレクトリ構成
+## 18. Recommended Directory Structure
 
 ```text
 .
@@ -653,62 +653,62 @@ Table: `zero_hit_searches`
 └── README.md
 ```
 
-## 19. 4時間 MVP 優先順位
+## 19. Four-Hour MVP Priorities
 
 ### Priority 1
 
-- Docker compose 起動
-- PostgreSQL 接続
-- 実在するスキーメーカーと実在する商品名をもとにした商品初期データ 100 件
-- トップページの商品 20 件表示
-- 商品検索
-- Zero Hit 記録
-- 管理者ログイン
-- Zero Hit Radar 表示
-- 管理画面の基本指標表示
-- `.env.example` と README の起動手順
+- Docker compose startup
+- PostgreSQL connection
+- 100 initial product records based on real ski manufacturers and real product names
+- Display 20 products on the home page
+- Product search
+- Zero Hit recording
+- Administrator login
+- Zero Hit Radar display
+- Basic metrics display on the administration screen
+- `.env.example` and README startup instructions
 
 ### Priority 2
 
-- AI 相談機能
-- 管理画面の見やすさ改善
-- 0 件検索時の UX 改善
-- カテゴリフィルタと並び替え
-- 手動検証手順
+- AI consultation feature
+- Improved administration-screen readability
+- Improved UX for zero-result searches
+- Category filtering and sorting
+- Manual verification procedures
 
 ### Priority 3
 
-- テスト追加
-- 商品画像の充実
-- Zero Hit 履歴イベントの詳細分析
-- より厳密な認証・認可
+- Additional tests
+- Enhanced product images
+- Detailed analysis of Zero Hit history events
+- More rigorous authentication and authorization
 
-## 20. 手動検証シナリオ
+## 20. Manual Verification Scenario
 
-1. `docker compose up --build` を実行する
-2. トップページにアクセスする
-3. `Codex Ski Shop` と表示され、商品が 20 件表示されることを確認する
-4. 存在する商品名またはカテゴリで検索する
-5. 検索結果が表示されることを確認する
-6. 存在しないキーワードで検索する
-7. 0 件表示になることを確認する
-8. 管理者ログインを行う
-9. 管理画面に遷移することを確認する
-10. Zero Hit Radar に 0 件検索キーワードが表示されることを確認する
-11. 同じ存在しないキーワードを再検索し、検索回数が増えることを確認する
-12. Zero Hit Radar の集計値、推定機会損失、空状態または一覧表示が自然に表示されることを確認する
-13. AI 相談フォームから問い合わせを行い、回答またはエラー表示が適切に表示されることを確認する
-14. PC 幅とモバイル幅でトップページ、商品一覧、ログイン、管理画面が破綻しないことを確認する
+1. Run `docker compose up --build`
+2. Access the home page
+3. Verify that `Codex Ski Shop` is displayed and that 20 products appear
+4. Search using an existing product name or category
+5. Verify that search results appear
+6. Search using a keyword that does not exist
+7. Verify that the screen indicates zero results
+8. Perform administrator login
+9. Verify navigation to the administration screen
+10. Verify that the zero-result search keyword appears in Zero Hit Radar
+11. Search again using the same nonexistent keyword and verify that the search count increases
+12. Verify that Zero Hit Radar aggregate values, estimated opportunity loss, and the empty state or list display appear naturally
+13. Submit an inquiry through the AI consultation form and verify that the response or error display appears appropriately
+14. Verify that the home page, product list, login page, and administration screen remain intact at desktop and mobile widths
 
-## 21. 成功条件
+## 21. Success Conditions
 
-本システムの成功条件は以下とする。
+The system success conditions are as follows:
 
-- 一般ユーザが `Codex Ski Shop` の商品を閲覧・検索できる
-- 実在するスキーメーカーと実在する商品名をもとにした 100 件の商品データがデフォルトで登録されている
-- `images` ディレクトリ配下の参考画像を踏まえた、破綻のない画面が実装されている
-- 検索結果が 0 件のキーワードが自動で記録される
-- 管理者が Zero Hit Radar で新規需要を発見できる
-- 管理者が AI にビジネス相談できる
-- Docker compose により開発者が容易に起動できる
-- 画面が未完成に見えず、OSS として公開しても問題ない基本品質を満たしている
+- General users can browse and search `Codex Ski Shop` products
+- 100 product records based on real ski manufacturers and real product names are registered by default
+- Screens based on the reference images under the `images` directory are implemented without broken layouts
+- Keywords with zero search results are recorded automatically
+- Administrators can discover new demand through Zero Hit Radar
+- Administrators can consult the AI about business decisions
+- Developers can start the system easily through Docker compose
+- The screens do not appear incomplete and meet the baseline quality required for publication as OSS

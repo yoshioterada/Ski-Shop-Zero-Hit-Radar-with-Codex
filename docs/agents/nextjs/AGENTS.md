@@ -1,84 +1,84 @@
 # Next.js AGENTS.md
 
-このファイルは、Next.js フロントエンドを実装・修正する AI エージェント向けの指示である。
+This file provides instructions for AI agents that implement or modify the Next.js frontend.
 
-## 基本方針
+## Core Principles
 
-- Next.js App Router を前提に、画面、ルーティング、データ取得、UX 状態を実装する。
-- `Codex Ski Shop` の利用者が商品を探しやすく、管理者が Zero Hit Radar を理解しやすい UI を優先する。
-- 見た目だけの未接続コンポーネントを残さない。
-- ローディング、空状態、エラー、認証切れ、送信中、成功状態を必ず設計する。
-- 主要画面は `spec-design/front-design.md` と `images/` の参照画像を踏まえて実装する。
-- Next.js、React、TypeScript は、プロジェクト作成時点で利用可能な安定版を使い、古い routing API を新規採用しない。
+- Implement screens, routing, data fetching, and UX states using the Next.js App Router.
+- Prioritize a UI that helps `Codex Ski Shop` users find products and helps administrators understand Zero Hit Radar.
+- Do not leave disconnected components that provide only a visual facade.
+- Always design loading, empty, error, expired-authentication, submitting, and success states.
+- Implement primary screens according to `spec-design/front-design.md` and the reference images in `images/`.
+- Use stable Next.js, React, and TypeScript versions available when the project is created, and do not adopt legacy routing APIs in new code.
 
-## UX と画面品質
+## UX and Screen Quality
 
-- 最初の画面は実際に使える体験にする。説明だけのランディングページにしない。
-- トップページ、商品一覧、ログイン、管理ダッシュボードの主要導線を自然につなげる。
-- 検索結果が 0 件の場合でも、ユーザーが次に何をすればよいか分かる UI にする。
-- 管理画面では、Zero Hit 件数、検索回数、推定機会損失、最終検索日時をすばやく比較できるようにする。
-- ボタン、入力、選択 UI は無効状態、フォーカス状態、送信中状態を持たせる。
-- テキストがボタンやカードからはみ出さないように、レスポンシブ制約を設定する。
-- モバイルとデスクトップの両方でレイアウト崩れを確認する。
-- 未完成に見えるプレースホルダー、ダミーカード、機能しないリンクを残さない。
-- keyboard 操作、focus ring、label、aria 属性、色 contrast を確認し、基本的なアクセシビリティを満たす。
-- 価格、日時、件数は日本語 UI に合わせて自然に format する。
+- Make the first screen a genuinely usable experience. Do not make it an informational landing page only.
+- Connect the primary navigation flows among the home page, product listing, login, and administration dashboard naturally.
+- When a search returns 0 results, provide a UI that makes the user's next action clear.
+- In the administration interface, make the Zero Hit count, search count, estimated opportunity loss, and last search time easy to compare quickly.
+- Provide disabled, focus, and submitting states for buttons, inputs, and selection controls.
+- Apply responsive constraints so text does not overflow buttons or cards.
+- Check for broken layouts on both mobile and desktop.
+- Do not leave placeholders, dummy cards, or nonfunctional links that make the product appear unfinished.
+- Verify keyboard operation, focus rings, labels, `aria` attributes, and color contrast, and meet basic accessibility requirements.
+- Format prices, dates and times, and counts naturally for the English UI.
 
-## Next.js 実装ルール
+## Next.js Implementation Rules
 
-- Server Component と Client Component の責務を明確にする。
-- ブラウザイベント、状態管理、フォーム操作、localStorage などが必要な箇所だけ `use client` を使う。
-- API 通信は typed API client に集約し、画面コンポーネントへ fetch 処理を散らばらせない。
-- 環境変数は `NEXT_PUBLIC_API_BASE_URL` など明確な名前にし、未設定時の fallback を定義する。
-- 認証 token は HttpOnly cookie を優先する。localStorage や sessionStorage を使う場合は MVP 上の理由を明確にし、XSS リスクを増やさない。
-- ルート保護は admin route の入口で行い、未認証時は `/login` に遷移する。
-- API エラーは握りつぶさず、画面上の自然なエラー状態として表示する。
-- 画像は実際の用途に合ったものを使い、alt text を設定する。
-- `next/link`、`next/image` など Next.js の標準機能を優先する。
-- SEO と共有品質のため、主要 page には適切な metadata を設定する。
-- 不要な client bundle を増やさず、重い依存や UI library の追加は必要性を説明する。
+- Define clear responsibilities for Server Components and Client Components.
+- Use `use client` only where browser events, state management, form interactions, `localStorage`, or similar client-side capabilities are required.
+- Centralize API communication in a typed API client; do not scatter `fetch` logic across screen components.
+- Give environment variables clear names such as `NEXT_PUBLIC_API_BASE_URL`, and define fallback behavior when they are unset.
+- Prefer HttpOnly cookies for authentication tokens. If `localStorage` or `sessionStorage` is used, clearly document the MVP rationale and do not increase XSS risk.
+- Enforce route protection at the entry point to admin routes, and redirect unauthenticated users to `/login`.
+- Do not suppress API errors; display them as natural error states in the UI.
+- Use images appropriate to their actual purpose and provide alt text.
+- Prefer standard Next.js features such as `next/link` and `next/image`.
+- Configure appropriate metadata for primary pages to support SEO and high-quality sharing previews.
+- Avoid unnecessary growth in the client bundle, and justify adding heavy dependencies or UI libraries.
 
-## コンポーネント設計
+## Component Design
 
-- コンポーネントは単一責務にし、props の型を明確にする。
-- `Header`、`SearchBar`、`ProductGrid`、`ProductCard`、`LoginForm`、`ZeroHitSummaryCards`、`ZeroHitTable`、`AiConsultPanel` など、設計書の責務に沿って分割する。
-- 再利用可能な UI とページ固有の orchestration を分ける。
-- カードの中にさらに大きなカードを入れる構成は避け、視認性を優先する。
-- lucide-react など既存の icon library がある場合は、ボタンや操作 UI に適切な icon を使う。
+- Give each component a single responsibility and define explicit types for its props.
+- Split components such as `Header`, `SearchBar`, `ProductGrid`, `ProductCard`, `LoginForm`, `ZeroHitSummaryCards`, `ZeroHitTable`, and `AiConsultPanel` according to the responsibilities defined in the design documents.
+- Separate reusable UI from page-specific orchestration.
+- Avoid nesting another large card inside a card, and prioritize visual clarity.
+- When an existing icon library such as `lucide-react` is available, use appropriate icons in buttons and interactive UI.
 
-## コメントとドキュメント
+## Comments and Documentation
 
-- public に再利用される component、hook、API client function には目的が分かるコメントを書く。
-- 複雑な認証判定、API fallback、Zero Hit の表示ロジックには短い説明コメントを置く。
-- UI 上に実装説明やショートカット説明を過剰に表示しない。
-- ユーザーに見せる文言は自然な日本語または設計書で指定された表現に統一する。
+- Add comments that explain the purpose of publicly reusable components, hooks, and API client functions.
+- Add brief explanatory comments for complex authentication decisions, API fallback behavior, and Zero Hit display logic.
+- Do not display excessive implementation details or shortcut instructions in the UI.
+- Keep user-facing copy consistent, using natural English or the exact wording specified in the design documents.
 
-## 禁止事項
+## Prohibitions
 
-- production UI に TODO、FIXME、仮文言、Lorem ipsum、dummy data を残さない。
-- 主要ボタンを `alert()` のみ、`console.log()` のみで済ませない。
-- API レスポンス型を `any` で受けない。
-- client component を不必要に増やさない。
-- 認証トークンや秘密情報をコードに直書きしない。
-- hydration error や console error を放置しない。
-- 見た目だけ整っていて実データと接続されていない画面を完了扱いにしない。
-- `<a>` で内部遷移を乱用せず、Next.js の内部遷移には `Link` を使う。
-- form submit、Enter key、二重送信防止を未実装のままにしない。
+- Do not leave TODOs, FIXMEs, placeholder copy, Lorem ipsum, or dummy data in the production UI.
+- Do not implement primary buttons with only `alert()` or only `console.log()`.
+- Do not type API responses as `any`.
+- Do not add unnecessary Client Components.
+- Do not hard-code authentication tokens or secrets.
+- Do not leave hydration errors or console errors unresolved.
+- Do not consider a screen complete when it is visually polished but not connected to real data.
+- Do not overuse `<a>` for internal navigation; use `Link` for internal Next.js navigation.
+- Do not leave form submission, Enter-key handling, or duplicate-submission prevention unimplemented.
 
-## テスト
+## Testing
 
-- Playwright で主要ユーザージャーニーを検証する。
-- 可能な場合は Vitest または Testing Library で component / hook / utility を検証する。
-- カバレッジ 80% 以上を目標にする。
-- 最低限、トップページ表示、商品検索、0 件検索、ログイン成功、ログイン失敗、管理画面表示、AI 相談の失敗時 UX をテストする。
-- レスポンシブ確認として、desktop と mobile viewport のスクリーンショットまたは E2E 検証を行う。
-- keyboard 操作とフォーム validation のテストを追加する。
+- Validate primary user journeys with Playwright.
+- When possible, test components, hooks, and utilities with Vitest or Testing Library.
+- Target at least 80% test coverage.
+- At minimum, test home-page rendering, product search, a search with 0 results, successful login, failed login, administration-screen rendering, and the failure UX for AI consultation.
+- For responsive verification, capture screenshots or run E2E checks at desktop and mobile viewport sizes.
+- Add tests for keyboard operation and form validation.
 
-## 完了前チェック
+## Pre-Completion Checklist
 
-- `npm run build`、`npm test`、`npm run lint` など、存在する品質チェックが成功する。
-- `npm run typecheck` が存在する場合は成功する。
-- ブラウザで主要画面を確認し、UI 崩れや未接続操作がない。
-- バックエンド API が未起動または失敗した場合でも、画面が破綻しない。
-- Docker またはローカル起動で再現可能である。
-- Playwright などで少なくとも desktop と mobile の主要画面を確認する。
+- Ensure all available quality checks, such as `npm run build`, `npm test`, and `npm run lint`, pass.
+- If `npm run typecheck` exists, ensure it passes.
+- Inspect primary screens in a browser and verify that there are no broken layouts or disconnected interactions.
+- Ensure the screen remains functional when the backend API is not running or fails.
+- Ensure the application is reproducible with Docker or a local startup procedure.
+- Verify primary screens at both desktop and mobile sizes with Playwright or an equivalent tool.

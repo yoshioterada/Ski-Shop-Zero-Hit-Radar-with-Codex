@@ -1,7 +1,5 @@
 # Phase 9 Acceptance Notes
 
-Date: 2026-06-04
-
 ## Scope
 
 Phase 9 verifies the backend against `spec-design/backend-design.md` chapters 10, 11, 15, 16, and 17, plus the implementation plan acceptance checklist.

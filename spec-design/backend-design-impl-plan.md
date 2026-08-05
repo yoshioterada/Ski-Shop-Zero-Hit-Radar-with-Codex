@@ -1,55 +1,55 @@
-# Codex Ski Shop Backend Service 実装計画
+# Codex Ski Shop Backend Service Implementation Plan
 
-## 1. 目的
+## 1. Purpose
 
-この実装計画は、`spec-design/backend-design.md` に記載された Spring Boot バックエンド仕様を、段階的かつ抜け漏れなく実装するための計画である。
+This implementation plan defines a phased, comprehensive approach for implementing the Spring Boot backend specification in `spec-design/backend-design.md`.
 
-`backend-design.md` は REST API、永続化、認証、Zero Hit Radar 集計、AI 相談、Docker、テスト、frontend 連携まで範囲が広いため、実装を 10 フェーズに分割する。各フェーズでは、実装対象、実装タスク、完了チェック項目を明確にし、次フェーズへ進む前に仕様との照合を行う。
+Because `backend-design.md` covers REST APIs, persistence, authentication, Zero Hit Radar aggregation, AI consultation, Docker, testing, and frontend integration, the implementation is divided into 10 phases. Each phase clearly defines its scope, implementation tasks, and completion checklist, and requires verification against the specification before proceeding to the next phase.
 
-## 2. 実装方針
+## 2. Implementation Approach
 
-- Java 21 / Spring Boot を前提に、Controller、Application Service、Domain Service、Repository、Infrastructure の責務分離を守る。
-- Product API から Zero Hit 記録までの一般ユーザージャーニーを先に成立させ、その後に認証、管理 API、AI 相談、backend container 化、全体 Docker Compose 統合を積み上げる。
-- AI 連携は Spring AI を主経路とし、API キー未設定でもデモが壊れない fallback を必ず実装する。
-- admin endpoint は Spring Security の認証・認可で保護し、Controller 内の都度チェックに寄せない。
-- 商品 seed は deterministic にし、Docker compose 起動後に 100 件の商品が再現可能に登録される状態を目指す。
-- 各フェーズで該当する単体テストまたは統合テストを追加し、最終的にカバレッジ 80% 以上を目標にする。
-- 仕様変更が必要になった場合は、実装前に `backend-design.md` と本計画を更新する。
-- 最終成果物として、`frontend`、`backend`、`db` を `docker-compose.yml` で一括起動できる状態と、利用者が再現できる `README.md` を必ず整備する。
+- Use Java 21 / Spring Boot and maintain clear responsibility boundaries among Controller, Application Service, Domain Service, Repository, and Infrastructure layers.
+- Establish the general user journey from the Product API through Zero Hit recording first, then add authentication, admin APIs, AI consultation, backend containerization, and full Docker Compose integration.
+- Use Spring AI as the primary AI integration path and always implement a fallback so the demo remains functional when the API key is not configured.
+- Protect admin endpoints with Spring Security authentication and authorization rather than ad hoc checks in Controllers.
+- Make the product seed deterministic so that 100 products are reproducibly registered after Docker Compose starts.
+- Add relevant unit or integration tests in each phase, with a final coverage target of at least 80%.
+- If specification changes are required, update `backend-design.md` and this plan before implementation.
+- The final deliverables must allow `frontend`, `backend`, and `db` to start together through `docker-compose.yml` and must include a reproducible `README.md` for users.
 
-## 2.1 共通完了ゲート
+## 2.1 Common Completion Gate
 
-各フェーズの完了チェックに加えて、次を毎回確認する。
+In addition to each phase completion checklist, verify the following every time.
 
-- [ ] このフェーズの成果物が `backend-design.md` の対応章と矛盾していない。
-- [ ] `docs/agents/java/AGENTS.md` の Spring Boot 実装ルールに反していない。
-- [ ] production code に TODO、FIXME、仮実装、未接続 API、固定レスポンス、`Not implemented` が残っていない。
-- [ ] 秘密情報、平文の固定パスワード、API キー、Bearer token がソースコードに含まれていない。
-- [ ] 追加した public class、public method、重要なドメインロジックに必要十分な Javadoc またはコメントがある。
-- [ ] 既存テストとこのフェーズで追加したテストが成功している。
-- [ ] build、static analysis、format、coverage task が存在する場合は成功している。
-- [ ] 失敗時 UX に必要な API error response が frontend-friendly な形で返る。
-- [ ] frontend integration contract の camelCase JSON を壊していない。
+- [ ] The deliverables for this phase do not conflict with the corresponding sections of `backend-design.md`.
+- [ ] The implementation complies with the Spring Boot rules in `docs/agents/java/AGENTS.md`.
+- [ ] Production code contains no TODO, FIXME, temporary implementation, disconnected API, fixed response, or `Not implemented` marker.
+- [ ] Source code contains no secrets, fixed plaintext passwords, API keys, or Bearer tokens.
+- [ ] Added public classes, public methods, and important domain logic have sufficient Javadoc or comments.
+- [ ] Existing tests and tests added in this phase pass.
+- [ ] Build, static analysis, format, and coverage tasks pass when available.
+- [ ] API error responses required for failure-state UX are frontend-friendly.
+- [ ] The camelCase JSON defined by the frontend integration contract remains intact.
 
-## 3. フェーズ一覧
+## 3. Phase Overview
 
-| Phase | 名称 | 主な成果 |
-|---:|---|---|
-| 1 | バックエンド基盤・依存関係・設定 | Spring Boot プロジェクト、設定、Actuator、共通エラー |
-| 2 | DB schema・Entity・Repository・Seed | PostgreSQL schema、JPA entity、repository、100 件 seed |
-| 3 | Product API・検索・DTO 契約 | 商品一覧、商品検索、DTO、validation、検索仕様 |
-| 4 | Zero Hit 記録ドメイン | keyword 正規化、0 件検索 upsert、機会損失、優先度 |
-| 5 | Admin 認証・Spring Security | login、token、`/api/auth/me`、admin endpoint 保護、CORS |
-| 6 | Zero Hit Radar 管理 API | 一覧、期間 filter、sort、limit、summary、認可統合 |
-| 7 | AI 相談 API・Spring AI fallback | prompt、Spring AI adapter、fallback/error、AI API |
-| 8 | Backend container・運用設定 | backend Dockerfile、backend env mapping、logging、health |
-| 9 | Backend 統合テスト・OSS 受け入れ | backend 主要 journey、coverage、仕様照合 |
-| 10 | 全体 Docker Compose・README 整備 | `frontend`、`backend`、`db` 一括起動、README、再現手順 |
+| Phase | Name | Primary Deliverables |
+| ---: | --- | --- |
+| 1 | Backend Foundation, Dependencies, and Configuration | Spring Boot project, configuration, Actuator, common errors |
+| 2 | DB Schema, Entity, Repository, and Seed | PostgreSQL schema, JPA entity, repository, 100-record seed |
+| 3 | Product API, Search, and DTO Contract | Product list, product search, DTOs, validation, search specification |
+| 4 | Zero Hit Recording Domain | Keyword normalization, zero-result search upsert, opportunity loss, priority |
+| 5 | Admin Authentication and Spring Security | Login, token, `/api/auth/me`, admin endpoint protection, CORS |
+| 6 | Zero Hit Radar Admin API | List, period filter, sort, limit, summary, authorization integration |
+| 7 | AI Consultation API and Spring AI Fallback | Prompt, Spring AI adapter, fallback/error, AI API |
+| 8 | Backend Container and Operational Configuration | Backend Dockerfile, backend env mapping, logging, health |
+| 9 | Backend Integration Testing and OSS Acceptance | Core backend journeys, coverage, specification verification |
+| 10 | Full Docker Compose and README | Combined `frontend`, `backend`, and `db` startup, README, reproduction steps |
 
-## 3.1 仕様書対応表
+## 3.1 Specification Traceability Matrix
 
-| Phase | 対応する `backend-design.md` の章 |
-|---:|---|
+| Phase | Corresponding Sections in `backend-design.md` |
+| ---: | --- |
 | 1 | 1, 2, 7.1, 10, 11, 13, 16, 17 |
 | 2 | 3, 4, 7.4, 13, 15.1, 15.2 |
 | 3 | 5.1, 6.1, 7.1, 7.2, 10, 11, 12.1, 15 |
@@ -61,9 +61,9 @@
 | 9 | 10, 11, 15, 16, 17 |
 | 10 | 1, 10, 13, 14, 15.3, 16, 17 |
 
-## 4. Phase 1: バックエンド基盤・依存関係・設定
+## 4. Phase 1: Backend Foundation, Dependencies, and Configuration
 
-### 実装対象
+### Phase 1 Scope
 
 - Spring Boot backend project
 - Java 21 build configuration
@@ -73,36 +73,36 @@
 - health endpoint
 - base test setup
 
-### 実装タスク
+### Phase 1 Implementation Tasks
 
-1. Java 21 / Spring Boot の backend project を作成する。
-2. Spring Web MVC、Spring Validation、Spring Data JPA、PostgreSQL driver、Spring Security、Actuator、Flyway、Spring AI、test dependencies を追加する。
-3. package root を `com.codexskishop` など分かりやすい小文字 package に統一する。
-4. Controller、service、domain、repository、entity、dto、config、exception package を作成する。
-5. `application.yml` に datasource、JPA、Flyway、Actuator、CORS、admin、AI の外部設定キーを定義する。
-6. env var mapping を `SPRING_DATASOURCE_*`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`、`AI_API_KEY`、`AI_MODEL`、`CORS_ALLOWED_ORIGINS` に合わせる。
-7. Jackson の camelCase JSON が DTO record と一致することを確認する。
-8. `ProblemDetail` または custom error object による共通 error response を実装する。
-9. validation error、認証失敗、想定外 error を frontend-friendly に返す `@ControllerAdvice` を実装する。
-10. `/actuator/health` を public health endpoint として利用できる状態にする。
-11. smoke test と context load test を追加する。
+1. Create a Java 21 / Spring Boot backend project.
+2. Add Spring Web MVC, Spring Validation, Spring Data JPA, PostgreSQL driver, Spring Security, Actuator, Flyway, Spring AI, and test dependencies.
+3. Standardize the package root on a clear lowercase package such as `com.codexskishop`.
+4. Create Controller, service, domain, repository, entity, dto, config, and exception packages.
+5. Define external configuration keys for the datasource, JPA, Flyway, Actuator, CORS, admin, and AI in `application.yml`.
+6. Map environment variables to `SPRING_DATASOURCE_*`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `AI_API_KEY`, `AI_MODEL`, and `CORS_ALLOWED_ORIGINS`.
+7. Verify that Jackson camelCase JSON matches the DTO records.
+8. Implement a common error response using `ProblemDetail` or a custom error object.
+9. Implement `@ControllerAdvice` that returns frontend-friendly validation errors, authentication failures, and unexpected errors.
+10. Make `/actuator/health` available as a public health endpoint.
+11. Add a smoke test and context load test.
 
-### 完了チェック
+### Phase 1 Completion Checklist
 
-- [ ] backend project が Java 21 で build できる。
-- [ ] Spring Boot dependencies が `backend-design.md` の technology stack と一致している。
-- [ ] package 構成が layered architecture の責務と対応している。
-- [ ] `application.yml` に必要な env var mapping が定義されている。
-- [ ] datasource、admin credentials、AI、CORS の秘密値がコードに直書きされていない。
-- [ ] `/actuator/health` が起動時に `200` を返す。
-- [ ] validation error が `400` と分かりやすい JSON payload で返る。
-- [ ] unexpected error が秘密情報を含まない JSON payload で返る。
-- [ ] `./mvnw test` または `./gradlew test` が成功する。
-- [ ] `backend-design.md` の 1, 2, 10, 11, 13, 16 章と照合済みである。
+- [ ] The backend project builds with Java 21.
+- [ ] Spring Boot dependencies match the technology stack in `backend-design.md`.
+- [ ] The package structure corresponds to layered architecture responsibilities.
+- [ ] Required environment variable mappings are defined in `application.yml`.
+- [ ] Secrets for the datasource, admin credentials, AI, and CORS are not hard-coded.
+- [ ] `/actuator/health` returns `200` after startup.
+- [ ] Validation errors return `400` with a clear JSON payload.
+- [ ] Unexpected errors return a JSON payload that contains no secrets.
+- [ ] `./mvnw test` or `./gradlew test` passes.
+- [ ] Verified against sections 1, 2, 10, 11, 13, and 16 of `backend-design.md`.
 
-## 5. Phase 2: DB schema・Entity・Repository・Seed
+## 5. Phase 2: DB Schema, Entity, Repository, and Seed
 
-### 実装対象
+### Phase 2 Scope
 
 - Flyway migration
 - `Product` entity
@@ -113,40 +113,40 @@
 - product seed data
 - repository tests
 
-### 実装タスク
+### Phase 2 Implementation Tasks
 
-1. `products` table migration を作成する。
-2. `zero_hit_searches` table migration を作成する。
-3. `normalized_keyword` unique constraint を定義する。
-4. `idx_products_name_lower`、`idx_products_manufacturer_lower`、`idx_products_category` を定義する。
-5. `idx_zero_hit_hit_count`、`idx_zero_hit_last_searched_at` を定義する。
-6. `Product` entity に UUID、manufacturer、name、category、description、price、stockStatus、imageUrl、createdAt、updatedAt を実装する。
-7. `ZeroHitSearch` entity に UUID、keyword、normalizedKeyword、hitCount、priority、estimatedOpportunityLoss、firstSearchedAt、lastSearchedAt を実装する。
-8. `stockStatus` と `priority` は enum または安全な値制約で表現する。
-9. created/updated timestamp の設定方式を実装する。
-10. `ProductRepository` に初期一覧、検索、平均価格、distinct category、distinct manufacturer の取得 method を実装する。
-11. `ZeroHitSearchRepository` に normalized keyword 検索、保存、radar items、summary 用 query を実装する。
-12. 実在メーカー・実在商品名をもとにした 100 件の商品 seed を deterministic に作成する。
-13. seed data には category、description、price、stock status、image placeholder を必ず含める。
-14. Repository test で schema、constraint、主要 query を検証する。
+1. Create the `products` table migration.
+2. Create the `zero_hit_searches` table migration.
+3. Define the `normalized_keyword` unique constraint.
+4. Define `idx_products_name_lower`, `idx_products_manufacturer_lower`, and `idx_products_category`.
+5. Define `idx_zero_hit_hit_count` and `idx_zero_hit_last_searched_at`.
+6. Implement UUID, manufacturer, name, category, description, price, stockStatus, imageUrl, createdAt, and updatedAt in the `Product` entity.
+7. Implement UUID, keyword, normalizedKeyword, hitCount, priority, estimatedOpportunityLoss, firstSearchedAt, and lastSearchedAt in the `ZeroHitSearch` entity.
+8. Represent `stockStatus` and `priority` with enums or safe value constraints.
+9. Implement the created/updated timestamp assignment mechanism.
+10. Implement methods in `ProductRepository` to retrieve the initial list, search results, average price, distinct categories, and distinct manufacturers.
+11. Implement queries in `ZeroHitSearchRepository` for normalized keyword lookup, persistence, radar items, and summaries.
+12. Create a deterministic seed of 100 products based on real manufacturers and real product names.
+13. Ensure the seed data includes category, description, price, stock status, and an image placeholder.
+14. Verify the schema, constraints, and primary queries with Repository tests.
 
-### 完了チェック
+### Phase 2 Completion Checklist
 
-- [ ] `products` table が 4.2 の column、type、constraint を満たしている。
-- [ ] `zero_hit_searches` table が 4.2 の column、type、constraint を満たしている。
-- [ ] `normalized_keyword` が unique constraint で重複防止される。
-- [ ] 4.3 の index が定義されている。
-- [ ] product seed が 100 件登録される。
-- [ ] seed data の category が skis、ski boots、bindings、goggles、helmets、wear、gloves、poles、wax、tuning goods をカバーしている。
-- [ ] manufacturer、name、category、description、price、stock status が NULL にならない。
-- [ ] average price query が機会損失計算に利用できる値を返す。
-- [ ] distinct category と distinct manufacturer が AI context に利用できる。
-- [ ] repository tests が成功する。
-- [ ] `backend-design.md` の 3, 4, 7.4 章と照合済みである。
+- [ ] The `products` table satisfies the columns, types, and constraints in section 4.2.
+- [ ] The `zero_hit_searches` table satisfies the columns, types, and constraints in section 4.2.
+- [ ] The `normalized_keyword` unique constraint prevents duplicates.
+- [ ] The indexes in section 4.3 are defined.
+- [ ] The product seed registers 100 records.
+- [ ] Seed data categories cover skis, ski boots, bindings, goggles, helmets, wear, gloves, poles, wax, and tuning goods.
+- [ ] Manufacturer, name, category, description, price, and stock status are never NULL.
+- [ ] The average price query returns a value suitable for opportunity loss calculations.
+- [ ] Distinct categories and distinct manufacturers are available for AI context.
+- [ ] Repository tests pass.
+- [ ] Verified against sections 3, 4, and 7.4 of `backend-design.md`.
 
-## 6. Phase 3: Product API・検索・DTO 契約
+## 6. Phase 3: Product API, Search, and DTO Contract
 
-### 実装対象
+### Phase 3 Scope
 
 - Product DTO records
 - `ProductController`
@@ -155,78 +155,78 @@
 - product mapping
 - product/search API tests
 
-### 実装タスク
+### Phase 3 Implementation Tasks
 
-1. `ProductDto`、`ProductListResponse`、`ProductSearchResponse` を Java record で実装する。
-2. Entity から DTO への mapping を実装する。
-3. `GET /api/products` を実装する。
-4. `GET /api/products/search` を実装する。
-5. `limit`、`category`、`sort` query parameter を validation する。
-6. `q` を trim し、blank の扱いを仕様どおり制御する。
-7. 商品検索は manufacturer、name、category、description を対象にする。
-8. category filter と sort を repository/service に接続する。
-9. `ProductSearchResponse.zeroHitRecorded` はこのフェーズでは常に false または Zero Hit service 接続前の明示的な振る舞いにし、Phase 4 で完成させる。
-10. public endpoint として security なしでも呼べることを後続 Phase 5 で再確認できるように test を用意する。
-11. API integration test で一覧、検索一致、blank search、不正 parameter を検証する。
+1. Implement `ProductDto`, `ProductListResponse`, and `ProductSearchResponse` as Java records.
+2. Implement Entity-to-DTO mapping.
+3. Implement `GET /api/products`.
+4. Implement `GET /api/products/search`.
+5. Validate the `limit`, `category`, and `sort` query parameters.
+6. Trim `q` and handle blank values according to the specification.
+7. Search manufacturer, name, category, and description fields.
+8. Connect the category filter and sort behavior to the repository/service.
+9. In this phase, make `ProductSearchResponse.zeroHitRecorded` always false or define explicit behavior before Zero Hit service integration; complete it in Phase 4.
+10. Add tests that allow Phase 5 to reconfirm that the endpoints remain publicly accessible without security credentials.
+11. Use API integration tests to verify listing, matching searches, blank searches, and invalid parameters.
 
-### 完了チェック
+### Phase 3 Completion Checklist
 
-- [ ] `GET /api/products` が `ProductListResponse` の camelCase JSON を返す。
-- [ ] `GET /api/products` の初期表示相当で最大 20 件を返せる。
-- [ ] `GET /api/products/search?q=Atomic` のような検索で一致商品を返す。
-- [ ] 検索対象が manufacturer、name、category、description を含んでいる。
-- [ ] blank keyword で Zero Hit 記録対象にならない制御がある。
-- [ ] `limit` の上限と不正値が validation される。
-- [ ] `category` filter が商品一覧と検索の両方に反映される。
-- [ ] `sort` の許可値以外で `400` を返す。
-- [ ] DTO field が 6.1 と一致している。
-- [ ] API tests が成功する。
-- [ ] `backend-design.md` の 5.1, 6.1, 7.1, 7.2, 10, 11, 12.1 章と照合済みである。
+- [ ] `GET /api/products` returns the camelCase JSON defined by `ProductListResponse`.
+- [ ] `GET /api/products` can return up to 20 records for the initial display.
+- [ ] A search such as `GET /api/products/search?q=Atomic` returns matching products.
+- [ ] Search targets include manufacturer, name, category, and description.
+- [ ] A blank keyword is excluded from Zero Hit recording.
+- [ ] The upper bound and invalid values for `limit` are validated.
+- [ ] The `category` filter applies to both product listing and search.
+- [ ] A `sort` value outside the allowed set returns `400`.
+- [ ] DTO fields match section 6.1.
+- [ ] API tests pass.
+- [ ] Verified against sections 5.1, 6.1, 7.1, 7.2, 10, 11, and 12.1 of `backend-design.md`.
 
-## 7. Phase 4: Zero Hit 記録ドメイン
+## 7. Phase 4: Zero Hit Recording Domain
 
-### 実装対象
+### Phase 4 Scope
 
 - `KeywordNormalizer`
 - `OpportunityLossCalculator`
 - `ZeroHitRecordingService`
-- Product search との接続
+- Product search integration
 - zero-hit upsert tests
 
-### 実装タスク
+### Phase 4 Implementation Tasks
 
-1. `KeywordNormalizer.normalize()` を実装する。
-2. normalize rule は trim、lower-case、repeated whitespace collapse とする。
-3. `OpportunityLossCalculator.calculate()` を実装する。
-4. average product price を固定値または repository query から取得する方式を決定し、仕様と矛盾しないように実装する。
-5. `ZeroHitRecordingService.record(keyword)` を実装する。
-6. normalized keyword が存在しない場合、`hitCount=1`、`firstSearchedAt=now`、`lastSearchedAt=now` で insert する。
-7. normalized keyword が存在する場合、`hitCount` を increment し、`lastSearchedAt` を更新する。
-8. insert/update 時に `estimatedOpportunityLoss` を再計算する。
-9. insert/update 時に `priority` を `HIGH`、`MEDIUM`、`LOW` に再計算する。
-10. MVP threshold を `backend-design.md` の例に沿って明文化する。
-11. `ProductSearchService` から検索結果 0 件かつ valid non-empty search のときだけ `record(keyword)` を呼ぶ。
-12. 同時更新時にも unique constraint と transaction で重複 row を作らないようにする。
-13. unit test と integration test で normalize、機会損失、初回記録、繰り返し increment、blank 除外を検証する。
+1. Implement `KeywordNormalizer.normalize()`.
+2. Define normalization rules as trim, lower-case, and repeated whitespace collapse.
+3. Implement `OpportunityLossCalculator.calculate()`.
+4. Decide whether to obtain the average product price from a fixed value or a repository query, and implement it consistently with the specification.
+5. Implement `ZeroHitRecordingService.record(keyword)`.
+6. When the normalized keyword does not exist, insert it with `hitCount=1`, `firstSearchedAt=now`, and `lastSearchedAt=now`.
+7. When the normalized keyword exists, increment `hitCount` and update `lastSearchedAt`.
+8. Recalculate `estimatedOpportunityLoss` on insert/update.
+9. Recalculate `priority` as `HIGH`, `MEDIUM`, or `LOW` on insert/update.
+10. Explicitly document the MVP threshold based on the example in `backend-design.md`.
+11. Call `record(keyword)` from `ProductSearchService` only when the search returns 0 results and is a valid non-empty search.
+12. Use the unique constraint and a transaction to prevent duplicate rows during concurrent updates.
+13. Use unit and integration tests to verify normalization, opportunity loss, initial recording, repeated increments, and blank-value exclusion.
 
-### 完了チェック
+### Phase 4 Completion Checklist
 
-- [ ] `KeywordNormalizer` が trim、lower-case、whitespace collapse を満たす。
-- [ ] valid non-empty search 以外では zero-hit が記録されない。
-- [ ] 検索結果が 1 件以上の場合は zero-hit が記録されない。
-- [ ] 検索結果 0 件の場合は `zeroHitRecorded=true` を返す。
-- [ ] 初回 zero-hit で row が 1 件 insert される。
-- [ ] 同じ normalized keyword の再検索で row が増えず `hitCount` が増える。
-- [ ] `firstSearchedAt` は初回時刻を維持し、`lastSearchedAt` は再検索時に更新される。
-- [ ] `estimatedOpportunityLoss` が `hitCount × averageProductPrice` に基づき更新される。
-- [ ] `priority` が hitCount、recency、または opportunity loss の決めたルールで更新される。
-- [ ] upsert 周りが transaction 境界内で実行される。
-- [ ] zero-hit tests が成功する。
-- [ ] `backend-design.md` の 3.2, 4.2, 7.2, 7.3, 12.1 章と照合済みである。
+- [ ] `KeywordNormalizer` performs trim, lower-case conversion, and whitespace collapse.
+- [ ] Zero Hits are not recorded for anything other than a valid non-empty search.
+- [ ] A search with at least 1 result does not record a Zero Hit.
+- [ ] A search with 0 results returns `zeroHitRecorded=true`.
+- [ ] The initial Zero Hit inserts exactly 1 row.
+- [ ] Repeating a search for the same normalized keyword increments `hitCount` without adding a row.
+- [ ] `firstSearchedAt` retains the initial timestamp, and `lastSearchedAt` updates on repeated searches.
+- [ ] `estimatedOpportunityLoss` is updated based on `hitCount × averageProductPrice`.
+- [ ] `priority` is updated according to the defined hitCount, recency, or opportunity loss rule.
+- [ ] The upsert operation runs within a transaction boundary.
+- [ ] Zero Hit tests pass.
+- [ ] Verified against sections 3.2, 4.2, 7.2, 7.3, and 12.1 of `backend-design.md`.
 
-## 8. Phase 5: Admin 認証・Spring Security
+## 8. Phase 5: Admin Authentication and Spring Security
 
-### 実装対象
+### Phase 5 Scope
 
 - Auth DTO records
 - `AdminAuthService`
@@ -237,51 +237,51 @@
 - CORS config
 - security tests
 
-### 実装タスク
+### Phase 5 Implementation Tasks
 
-1. `LoginRequest`、`LoginResponse`、`AdminUserDto`、`AuthMeResponse` を Java record で実装する。
-2. `ADMIN_USERNAME`、`ADMIN_PASSWORD` を設定 properties として読み込む。
-3. `AdminAuthService.login()` を実装する。
-4. password は source code に直書きせず、env var の値で検証する。
-5. token 方式を signed JWT または opaque in-memory token with expiry から選び、選択理由をコメントまたは設定に残す。
-6. token expiry を実装し、期限切れ token は invalid token として扱う。
-7. `AdminAuthService.validateToken()` を実装する。
-8. valid token から `ROLE_ADMIN` authority を持つ Spring Security `Authentication` を作成する。
-9. bearer token filter を `OncePerRequestFilter` または同等の Spring Security filter として実装する。
-10. `POST /api/auth/login` を実装する。
-11. login failure は原則 `401 Unauthorized` と error payload を返す。MVP で `LoginResponse.success=false` を返す方式を採る場合も、frontend が token を保存しない契約を README または API contract に明記する。
-12. `GET /api/auth/me` を実装する。
-13. `authenticated=false` の場合に `user` が `null` または JSON 上省略されても frontend が扱える response にする。
-14. `SecurityConfig` で public endpoint と protected endpoint の policy を定義する。
-15. `/api/products`、`/api/products/search`、`/api/auth/login`、`/actuator/health` を public にする。
-16. `/api/auth/me` は bearer token required にする。
-17. `/api/admin/**` は `ROLE_ADMIN` required にする。
-18. `AuthenticationEntryPoint` で missing/invalid token を `401` と controlled error にする。
-19. `AccessDeniedHandler` で role 不足時の `403` を controlled error にする。
-20. API endpoint 用に CSRF を適切に無効化する。
-21. `CORS_ALLOWED_ORIGINS` から `http://localhost:3000` などを許可する。
-22. security tests で public access、login 成功/失敗、me 成功/失敗、期限切れ token、admin endpoint 未認証拒否を検証する。
+1. Implement `LoginRequest`, `LoginResponse`, `AdminUserDto`, and `AuthMeResponse` as Java records.
+2. Load `ADMIN_USERNAME` and `ADMIN_PASSWORD` as configuration properties.
+3. Implement `AdminAuthService.login()`.
+4. Validate the password against the environment variable value rather than hard-coding it in source code.
+5. Choose either a signed JWT or an opaque in-memory token with expiry, and document the rationale in a comment or configuration.
+6. Implement token expiry and treat expired tokens as invalid.
+7. Implement `AdminAuthService.validateToken()`.
+8. Create a Spring Security `Authentication` with `ROLE_ADMIN` authority from a valid token.
+9. Implement the bearer token filter as a `OncePerRequestFilter` or equivalent Spring Security filter.
+10. Implement `POST /api/auth/login`.
+11. As a rule, login failure returns `401 Unauthorized` with an error payload. If the MVP uses `LoginResponse.success=false`, document in the README or API contract that the frontend must not store a token.
+12. Implement `GET /api/auth/me`.
+13. Ensure the frontend can handle a response where `user` is `null` or omitted from JSON when `authenticated=false`.
+14. Define policies for public and protected endpoints in `SecurityConfig`.
+15. Make `/api/products`, `/api/products/search`, `/api/auth/login`, and `/actuator/health` public.
+16. Require a bearer token for `/api/auth/me`.
+17. Require `ROLE_ADMIN` for `/api/admin/**`.
+18. Use `AuthenticationEntryPoint` to return `401` with a controlled error for missing/invalid tokens.
+19. Use `AccessDeniedHandler` to return `403` with a controlled error when the role is insufficient.
+20. Disable CSRF appropriately for API endpoints.
+21. Allow origins such as `http://localhost:3000` from `CORS_ALLOWED_ORIGINS`.
+22. Use security tests to verify public access, successful/failed login, successful/failed me requests, expired tokens, and rejection of unauthenticated admin endpoint requests.
 
-### 完了チェック
+### Phase 5 Completion Checklist
 
-- [ ] admin credentials が env var から読み込まれる。
-- [ ] admin password、token secret、token value が source code に含まれない。
-- [ ] valid login が token と admin user を返す。
-- [ ] invalid login が `401` と error payload を返す。
-- [ ] token に expiry があり、期限切れ token が `401` になる。
-- [ ] `GET /api/auth/me` が valid token で `authenticated=true` を返す。
-- [ ] `GET /api/auth/me` が missing/invalid token で `401` を返す。
-- [ ] `AuthMeResponse` の unauthenticated state が frontend contract と矛盾しない。
-- [ ] `/api/admin/**` が `ROLE_ADMIN` なしで拒否される。
-- [ ] valid admin token で `/api/admin/**` に到達できる。
-- [ ] Product APIs と health endpoint は public のままである。
-- [ ] CORS が frontend origin からの API call を許可する。
-- [ ] security tests が成功する。
-- [ ] `backend-design.md` の 5.2, 6.2, 7.2, 8, 10.2, 11, 13 章と照合済みである。
+- [ ] Admin credentials are loaded from environment variables.
+- [ ] Source code contains no admin password, token secret, or token value.
+- [ ] A valid login returns a token and admin user.
+- [ ] An invalid login returns `401` with an error payload.
+- [ ] Tokens have an expiry, and expired tokens return `401`.
+- [ ] `GET /api/auth/me` returns `authenticated=true` with a valid token.
+- [ ] `GET /api/auth/me` returns `401` for a missing/invalid token.
+- [ ] The unauthenticated state of `AuthMeResponse` does not conflict with the frontend contract.
+- [ ] `/api/admin/**` is rejected without `ROLE_ADMIN`.
+- [ ] `/api/admin/**` is accessible with a valid admin token.
+- [ ] Product APIs and the health endpoint remain public.
+- [ ] CORS permits API calls from the frontend origin.
+- [ ] Security tests pass.
+- [ ] Verified against sections 5.2, 6.2, 7.2, 8, 10.2, 11, and 13 of `backend-design.md`.
 
-## 9. Phase 6: Zero Hit Radar 管理 API
+## 9. Phase 6: Zero Hit Radar Admin API
 
-### 実装対象
+### Phase 6 Scope
 
 - Zero Hit DTO records
 - `ZeroHitQueryService`
@@ -289,39 +289,39 @@
 - radar query and summary
 - admin API tests
 
-### 実装タスク
+### Phase 6 Implementation Tasks
 
-1. `ZeroHitItemDto`、`ZeroHitSummaryDto`、`ZeroHitListResponse` を Java record で実装する。
-2. `Priority` enum を API DTO と domain/entity の契約に合わせる。
-3. `GET /api/admin/zero-hits` を実装する。
-4. `days` query parameter を 7、30、90 などの期間 filter として実装する。
-5. `sort` query parameter を hit count desc、last searched desc などの許可値で実装する。
-6. `limit` query parameter の default、上限、不正値 validation を実装する。
-7. `ZeroHitQueryService.listZeroHits(days, sort, limit)` を実装する。
-8. `lastSearchedAt` を基準に期間 filter を適用する。
-9. summary の `zeroHitKeywordCount`、`searchVolume`、`estimatedOpportunityLoss` を算出する。
-10. Zero Hit がない場合も空 list と 0 summary を自然に返す。
-11. Spring Security の `ROLE_ADMIN` 認可で保護されていることを確認する。
-12. integration test で token なし拒否、token あり成功、sort、days、limit、summary、空状態を検証する。
+1. Implement `ZeroHitItemDto`, `ZeroHitSummaryDto`, and `ZeroHitListResponse` as Java records.
+2. Align the `Priority` enum with the API DTO and domain/entity contracts.
+3. Implement `GET /api/admin/zero-hits`.
+4. Implement the `days` query parameter as a period filter supporting values such as 7, 30, and 90.
+5. Implement the `sort` query parameter with allowed values such as hit count descending and last searched descending.
+6. Implement the default, upper bound, and invalid-value validation for the `limit` query parameter.
+7. Implement `ZeroHitQueryService.listZeroHits(days, sort, limit)`.
+8. Apply the period filter based on `lastSearchedAt`.
+9. Calculate `zeroHitKeywordCount`, `searchVolume`, and `estimatedOpportunityLoss` for the summary.
+10. Return an empty list and zero-valued summary naturally when no Zero Hits exist.
+11. Verify that Spring Security `ROLE_ADMIN` authorization protects the endpoint.
+12. Use integration tests to verify rejection without a token, success with a token, sort, days, limit, summary, and the empty state.
 
-### 完了チェック
+### Phase 6 Completion Checklist
 
-- [ ] `GET /api/admin/zero-hits` が `ZeroHitListResponse` の camelCase JSON を返す。
-- [ ] token なしでは `401` を返す。
-- [ ] valid admin token で一覧を取得できる。
-- [ ] `days` filter が直近期間の zero-hit だけを返す。
-- [ ] `sort=hitCount` 相当で需要の強い順に並ぶ。
-- [ ] `sort=lastSearchedAt` 相当で新しい順に並ぶ。
-- [ ] `limit` が適用され、不正値では `400` を返す。
-- [ ] summary の keyword count、search volume、estimated opportunity loss が items と整合する。
-- [ ] zero-hit なしでも empty items と 0 summary を返す。
-- [ ] DTO field が 6.3 と一致している。
-- [ ] admin API tests が成功する。
-- [ ] `backend-design.md` の 5.3, 6.3, 7.1, 7.2, 7.4, 10.2, 12.2 章と照合済みである。
+- [ ] `GET /api/admin/zero-hits` returns the camelCase JSON defined by `ZeroHitListResponse`.
+- [ ] A request without a token returns `401`.
+- [ ] A valid admin token can retrieve the list.
+- [ ] The `days` filter returns only Zero Hits from the recent period.
+- [ ] The equivalent of `sort=hitCount` orders records by strongest demand.
+- [ ] The equivalent of `sort=lastSearchedAt` orders records from newest to oldest.
+- [ ] `limit` is applied, and an invalid value returns `400`.
+- [ ] The summary keyword count, search volume, and estimated opportunity loss are consistent with the items.
+- [ ] When no Zero Hits exist, the response still returns empty items and a zero-valued summary.
+- [ ] DTO fields match section 6.3.
+- [ ] Admin API tests pass.
+- [ ] Verified against sections 5.3, 6.3, 7.1, 7.2, 7.4, 10.2, and 12.2 of `backend-design.md`.
 
-## 10. Phase 7: AI 相談 API・Spring AI fallback
+## 10. Phase 7: AI Consultation API and Spring AI Fallback
 
-### 実装対象
+### Phase 7 Scope
 
 - AI DTO records
 - `ProviderStatus` enum
@@ -331,42 +331,42 @@
 - `AiConsultController`
 - AI fallback tests
 
-### 実装タスク
+### Phase 7 Implementation Tasks
 
-1. `AiConsultRequest`、`AiConsultResponse`、`ProviderStatus` を Java record / enum で実装する。
-2. `AiConsultRequest.question` に `@NotBlank` validation を付ける。
-3. `AiPromptBuilder` を実装する。
-4. prompt に keyword、hit count、last searched time、既存 category、既存 manufacturer を含める。
-5. prompt は日本語で、結論、理由、仕入れ候補、注意点、次のアクションを求める。
-6. Spring AI `ChatClient` を使う adapter を実装する。
-7. Spring AI provider 設定を env var から注入する。
-8. `AI_API_KEY` 未設定時に useful demo fallback answer と `ProviderStatus.FALLBACK` を返す。
-9. AI provider error 時に service が crash せず、controlled fallback または `ProviderStatus.ERROR` を返す。
-10. `AiConsultationService.consult()` で prompt 作成、product context 取得、AI adapter 呼び出し、fallback を orchestration する。
-11. `POST /api/admin/ai-consult` を実装する。
-12. endpoint は `/api/admin/**` として `ROLE_ADMIN` で保護する。
-13. AI 回答や prompt に secret、raw bearer token、API key が混入しないようにする。
-14. unit test で prompt 内容、fallback、provider error を検証する。
-15. integration test で token なし拒否、valid token fallback 成功、validation error を検証する。
+1. Implement `AiConsultRequest`, `AiConsultResponse`, and `ProviderStatus` as Java records / enums.
+2. Add `@NotBlank` validation to `AiConsultRequest.question`.
+3. Implement `AiPromptBuilder`.
+4. Include the keyword, hit count, last searched time, existing categories, and existing manufacturers in the prompt.
+5. Write the prompt in Japanese and request a conclusion, rationale, procurement candidates, cautions, and next actions.
+6. Implement an adapter that uses Spring AI `ChatClient`.
+7. Inject Spring AI provider configuration from environment variables.
+8. When `AI_API_KEY` is not configured, return a useful demo fallback answer with `ProviderStatus.FALLBACK`.
+9. When an AI provider error occurs, prevent the service from crashing and return a controlled fallback or `ProviderStatus.ERROR`.
+10. In `AiConsultationService.consult()`, orchestrate prompt creation, product context retrieval, AI adapter invocation, and fallback behavior.
+11. Implement `POST /api/admin/ai-consult`.
+12. Protect the endpoint with `ROLE_ADMIN` under `/api/admin/**`.
+13. Prevent secrets, raw bearer tokens, and API keys from entering AI responses or prompts.
+14. Use unit tests to verify prompt content, fallback behavior, and provider errors.
+15. Use integration tests to verify rejection without a token, successful fallback with a valid token, and validation errors.
 
-### 完了チェック
+### Phase 7 Completion Checklist
 
-- [ ] `POST /api/admin/ai-consult` が `AiConsultResponse` の camelCase JSON を返す。
-- [ ] token なしでは `401` を返す。
-- [ ] `question` blank では `400` を返す。
-- [ ] prompt に keyword、hit count、last searched time が含まれる。
-- [ ] prompt に既存 category と manufacturer の context が含まれる。
-- [ ] prompt が需要可能性、候補ブランド/商品タイプ、在庫検討、調達リスク、季節性、代替商品、次アクションを求めている。
-- [ ] AI API key 未設定で `ProviderStatus.FALLBACK` と実用的な日本語回答を返す。
-- [ ] provider error 時に backend が 500 で落ちず controlled response を返す。
-- [ ] Spring AI abstraction を主経路にしており、provider-specific HTTP code が散らばっていない。
-- [ ] AI secrets、password、bearer token が log や response に出ない。
-- [ ] AI tests が成功する。
-- [ ] `backend-design.md` の 5.3, 6.4, 7.2, 7.3, 9, 12.3, 13 章と照合済みである。
+- [ ] `POST /api/admin/ai-consult` returns the camelCase JSON defined by `AiConsultResponse`.
+- [ ] A request without a token returns `401`.
+- [ ] A blank `question` returns `400`.
+- [ ] The prompt includes the keyword, hit count, and last searched time.
+- [ ] The prompt includes context for existing categories and manufacturers.
+- [ ] The prompt requests demand potential, candidate brands/product types, inventory considerations, procurement risks, seasonality, alternative products, and next actions.
+- [ ] When the AI API key is not configured, the response contains `ProviderStatus.FALLBACK` and a practical answer in Japanese.
+- [ ] A provider error returns a controlled response instead of causing the backend to fail with 500.
+- [ ] Spring AI abstraction is the primary path, and provider-specific HTTP code is not scattered across the codebase.
+- [ ] AI secrets, passwords, and bearer tokens do not appear in logs or responses.
+- [ ] AI tests pass.
+- [ ] Verified against sections 5.3, 6.4, 7.2, 7.3, 9, 12.3, and 13 of `backend-design.md`.
 
-## 11. Phase 8: Backend container・運用設定
+## 11. Phase 8: Backend Container and Operational Configuration
 
-### 実装対象
+### Phase 8 Scope
 
 - backend Dockerfile
 - `.dockerignore`
@@ -375,37 +375,37 @@
 - health/readiness behavior
 - backend container smoke verification
 
-### 実装タスク
+### Phase 8 Implementation Tasks
 
-1. backend multi-stage Dockerfile を作成する。
-2. build stage は JDK 21 と Maven または Gradle を使う。
-3. runtime stage は JRE 21 相当で jar を実行する。
-4. `.dockerignore` を整備し、build artifact、IDE file、secret file を除外する。
-5. backend container が env var で datasource、admin credentials、AI config、CORS origin を受け取れることを確認する。
-6. backend から PostgreSQL へ compose service name `db` で接続できる profile/config を用意する。
-7. `/actuator/health` に DB connectivity が反映されることを確認する。
-8. AI provider health は base readiness を阻害しない設計にする。
-9. request path、status、duration、zero-hit event、AI provider status、auth failure を SLF4J で安全に log する。
-10. password、API key、raw bearer token を log に出さない。
-11. backend container 単体の build と smoke verification 手順を確認する。
+1. Create a multi-stage backend Dockerfile.
+2. Use JDK 21 and Maven or Gradle in the build stage.
+3. Run the jar with a JRE 21-equivalent runtime stage.
+4. Configure `.dockerignore` to exclude build artifacts, IDE files, and secret files.
+5. Verify that the backend container accepts datasource, admin credentials, AI configuration, and CORS origins through environment variables.
+6. Provide a profile/configuration that allows the backend to connect to PostgreSQL through the Compose service name `db`.
+7. Verify that `/actuator/health` reflects DB connectivity.
+8. Design AI provider health so it does not block base readiness.
+9. Safely log the request path, status, duration, Zero Hit event, AI provider status, and authentication failure with SLF4J.
+10. Do not log passwords, API keys, or raw bearer tokens.
+11. Verify reproducible build and smoke verification steps for the backend container by itself.
 
-### 完了チェック
+### Phase 8 Completion Checklist
 
-- [ ] backend Dockerfile が multi-stage build になっている。
-- [ ] container が `java -jar app.jar` 相当で起動する。
-- [ ] backend container が env var だけで datasource、admin、AI、CORS 設定を受け取れる。
-- [ ] backend container が PostgreSQL host `db` を使う設定に対応している。
-- [ ] host から `http://localhost:8080/actuator/health` にアクセスできる構成になっている。
-- [ ] migration と seed が container 起動時に適用される。
-- [ ] `GET /api/products` が container 環境で seed 商品を返す。
-- [ ] AI API key が空でも backend が起動し、AI fallback が使える。
-- [ ] log に password、API key、raw bearer token が出力されない。
-- [ ] backend container build と smoke verification が再現可能である。
-- [ ] `backend-design.md` の 13, 14, 16 章と照合済みである。
+- [ ] The backend Dockerfile uses a multi-stage build.
+- [ ] The container starts with the equivalent of `java -jar app.jar`.
+- [ ] The backend container accepts datasource, admin, AI, and CORS configuration exclusively through environment variables.
+- [ ] The backend container supports configuration that uses the PostgreSQL host `db`.
+- [ ] The configuration makes `http://localhost:8080/actuator/health` accessible from the host.
+- [ ] Migrations and seed data are applied when the container starts.
+- [ ] `GET /api/products` returns seeded products in the container environment.
+- [ ] The backend starts and AI fallback remains available when the AI API key is empty.
+- [ ] Logs contain no passwords, API keys, or raw bearer tokens.
+- [ ] The backend container build and smoke verification are reproducible.
+- [ ] Verified against sections 13, 14, and 16 of `backend-design.md`.
 
-## 12. Phase 9: Backend 統合テスト・OSS 受け入れ
+## 12. Phase 9: Backend Integration Testing and OSS Acceptance
 
-### 実装対象
+### Phase 9 Scope
 
 - full backend integration tests
 - frontend-backend contract verification
@@ -413,44 +413,44 @@
 - backend manual verification checklist
 - backend final specification traceability
 
-### 実装タスク
+### Phase 9 Implementation Tasks
 
-1. `backend-design.md` 15.1 の unit tests を全て実装済みか棚卸しする。
-2. `backend-design.md` 15.2 の integration tests を全て実装済みか棚卸しし、未実装を追加する。
-3. 商品一覧、商品検索、zero-hit 記録、admin login、zero-hit radar、AI fallback の主要 journey を一連の integration test で検証する。
-4. frontend DTO と backend JSON response の field name・型・endpoint が一致していることを contract test または手動確認で検証する。
-5. backend container と PostgreSQL を使った backend API 手動確認を行う。
-6. Zero Hit がない空状態用 response、API validation error、認証失敗、AI fallback、DB 接続 health を確認する。
-7. test coverage を測定し、80% 以上を目標に不足領域を補う。
-8. 80% に届かない場合は、未達理由と追加すべき test を明記する。
-9. public API、重要 domain logic、設定に必要な Javadoc/comment があるか確認する。
-10. OSS 公開前観点で secret、個人情報、ライセンス不明コード、不要 artifact がないか確認する。
-11. `docs/orchest-code-review*.agent.md` の観点を参考に backend source review を実施する。
-12. 最終的に `backend-design.md` 全章との traceability を確認し、抜け漏れがあれば該当 Phase に戻して修正する。
+1. Inventory whether all unit tests in section 15.1 of `backend-design.md` have been implemented.
+2. Inventory whether all integration tests in section 15.2 of `backend-design.md` have been implemented, and add any that are missing.
+3. Verify the core journeys for product listing, product search, Zero Hit recording, admin login, Zero Hit Radar, and AI fallback in a sequence of integration tests.
+4. Use contract tests or manual verification to confirm that frontend DTO and backend JSON response field names, types, and endpoints match.
+5. Manually verify the backend API using the backend container and PostgreSQL.
+6. Verify the empty-state response when no Zero Hits exist, API validation errors, authentication failures, AI fallback, and DB connection health.
+7. Measure test coverage, target at least 80%, and add tests for insufficiently covered areas.
+8. If coverage does not reach 80%, document the reason and the tests that should be added.
+9. Verify that public APIs, important domain logic, and configuration have the required Javadoc/comments.
+10. Before OSS publication, verify that no secrets, personal information, code with unknown licensing, or unnecessary artifacts are present.
+11. Review the backend source using the perspectives in `docs/orchest-code-review*.agent.md`.
+12. Finally, verify traceability against every section of `backend-design.md`; if anything is missing, return to the corresponding Phase and correct it.
 
-### 完了チェック
+### Phase 9 Completion Checklist
 
-- [ ] `KeywordNormalizer`、`OpportunityLossCalculator`、`AiPromptBuilder`、`AdminAuthService`、AI fallback の unit tests がある。
-- [ ] Product API、search zero-hit、repeat zero-hit increment、admin auth、zero-hit radar、AI fallback の integration tests がある。
-- [ ] `GET /api/products` が seed 商品を返す。
-- [ ] `GET /api/products/search?q=Atomic` が matching products を返す。
-- [ ] `GET /api/products/search?q=non-existing-keyword` が empty items と `zeroHitRecorded=true` を返す。
-- [ ] 同一 zero-hit keyword の再検索で `hitCount` が increment される。
-- [ ] `GET /api/admin/zero-hits` が token なしで拒否される。
-- [ ] admin login token で `GET /api/admin/zero-hits` が成功する。
-- [ ] AI endpoint が `AI_API_KEY` 未設定時に fallback を返す。
-- [ ] `/actuator/health` が DB connectivity を含めて正常に返る。
-- [ ] backend container と PostgreSQL を組み合わせた API smoke verification が成功する。
-- [ ] frontend contract の endpoint、field name、HTTP status、error payload が backend response と一致している。
-- [ ] build、static analysis、test、coverage が成功する。
-- [ ] coverage が 80% 以上、または未達理由と追加すべき test が明記されている。
-- [ ] production code に TODO、FIXME、仮実装、未接続 UI/API、押しても動かない主要ボタン連携が残っていない。
-- [ ] secret、個人情報、ライセンス不明のコピーコードが含まれていない。
-- [ ] `backend-design.md` の全章と本計画の全 Phase が照合済みである。
+- [ ] Unit tests exist for `KeywordNormalizer`, `OpportunityLossCalculator`, `AiPromptBuilder`, `AdminAuthService`, and AI fallback.
+- [ ] Integration tests exist for the Product API, search Zero Hits, repeated Zero Hit increments, admin authentication, Zero Hit Radar, and AI fallback.
+- [ ] `GET /api/products` returns seeded products.
+- [ ] `GET /api/products/search?q=Atomic` returns matching products.
+- [ ] `GET /api/products/search?q=non-existing-keyword` returns empty items and `zeroHitRecorded=true`.
+- [ ] Repeating a search for the same Zero Hit keyword increments `hitCount`.
+- [ ] `GET /api/admin/zero-hits` is rejected without a token.
+- [ ] `GET /api/admin/zero-hits` succeeds with an admin login token.
+- [ ] The AI endpoint returns fallback behavior when `AI_API_KEY` is not configured.
+- [ ] `/actuator/health` returns a healthy result that includes DB connectivity.
+- [ ] API smoke verification with the backend container and PostgreSQL succeeds.
+- [ ] Endpoints, field names, HTTP statuses, and error payloads in the frontend contract match backend responses.
+- [ ] Build, static analysis, test, and coverage tasks pass.
+- [ ] Coverage is at least 80%, or the reason for the shortfall and the tests to add are documented.
+- [ ] Production code contains no TODO, FIXME, temporary implementation, disconnected UI/API, or nonfunctional primary button integration.
+- [ ] No secrets, personal information, or copied code with unknown licensing are included.
+- [ ] Every section of `backend-design.md` has been verified against every Phase of this plan.
 
-## 13. Phase 10: 全体 Docker Compose・README 整備
+## 13. Phase 10: Full Docker Compose and README
 
-### 実装対象
+### Phase 10 Scope
 
 - root `docker-compose.yml`
 - root `.env.example` or documented env defaults
@@ -460,78 +460,78 @@
 - full-stack manual verification
 - root `README.md`
 
-### 実装タスク
+### Phase 10 Implementation Tasks
 
-1. repository root に `docker-compose.yml` を作成または更新する。
-2. compose service として `db`、`backend`、`frontend` を定義する。
-3. `db` service は PostgreSQL を使い、database、username、password、volume、healthcheck を定義する。
-4. `backend` service は backend Dockerfile から build し、`db` に依存し、host port `8080` を publish する。
-5. `backend` service の env に `SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/skishop`、`SPRING_DATASOURCE_USERNAME`、`SPRING_DATASOURCE_PASSWORD`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`、`AI_API_KEY`、`AI_MODEL`、`CORS_ALLOWED_ORIGINS=http://localhost:3000` を設定する。
-6. `frontend` service は frontend Dockerfile から build し、`backend` に依存し、host port `3000` を publish する。
-7. browser-side API 用に `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080` を設定する。
-8. server-side route handler や proxy を使う場合のみ、container-internal URL として `INTERNAL_API_BASE_URL=http://backend:8080` を設定する。
-9. frontend から PostgreSQL や AI provider へ直接接続しない構成であることを確認する。
-10. compose 起動後、backend migration と product seed 100 件が自動適用されることを確認する。
-11. `docker compose up --build` で `frontend`、`backend`、`db` が一括起動することを確認する。
-12. `http://localhost:3000` で frontend が表示され、`http://localhost:8080/actuator/health` で backend health が確認できることを確認する。
-13. 一般ユーザー journey として、トップページ初期商品表示、既存商品検索、0 件検索、Zero Hit 記録を確認する。
-14. 管理者 journey として、login、admin dashboard、Zero Hit Radar 表示、AI fallback 相談を確認する。
-15. full-stack 起動時に CORS error が発生しないことを browser で確認する。
-16. root `README.md` を作成または更新し、プロジェクトの目的を記載する。
-17. `README.md` に主要なディレクトリ構成を記載する。
-18. `README.md` に技術スタックと service 構成を記載する。
-19. `README.md` に前提ツール、環境変数、`.env` または compose env の扱いを記載する。
-20. `README.md` に local backend build/test/run 手順を記載する。
-21. `README.md` に local frontend build/test/run 手順を記載する。
-22. `README.md` に `docker compose up --build` による全体起動手順を記載する。
-23. `README.md` に主要 URL、初期 admin login 情報の設定方法、AI key 未設定時の fallback 挙動を記載する。
-24. `README.md` に主要 API endpoint、Zero Hit Radar の動作概要、トラブルシューティング、テスト・カバレッジ確認方法を記載する。
-25. `README.md` に secret を commit しない注意と OSS 公開時の確認事項を記載する。
+1. Create or update `docker-compose.yml` at the repository root.
+2. Define `db`, `backend`, and `frontend` as Compose services.
+3. Use PostgreSQL for the `db` service and define the database, username, password, volume, and healthcheck.
+4. Build the `backend` service from the backend Dockerfile, make it depend on `db`, and publish host port `8080`.
+5. Configure `SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/skishop`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `AI_API_KEY`, `AI_MODEL`, and `CORS_ALLOWED_ORIGINS=http://localhost:3000` in the `backend` service environment.
+6. Build the `frontend` service from the frontend Dockerfile, make it depend on `backend`, and publish host port `3000`.
+7. Configure `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080` for browser-side API access.
+8. Configure `INTERNAL_API_BASE_URL=http://backend:8080` as the container-internal URL only when using server-side route handlers or a proxy.
+9. Verify that the frontend does not connect directly to PostgreSQL or the AI provider.
+10. Verify that backend migrations and the 100-record product seed are applied automatically after Compose starts.
+11. Verify that `docker compose up --build` starts `frontend`, `backend`, and `db` together.
+12. Verify that the frontend is available at `http://localhost:3000` and backend health is available at `http://localhost:8080/actuator/health`.
+13. Verify the general user journey: initial product display on the home page, existing product search, zero-result search, and Zero Hit recording.
+14. Verify the administrator journey: login, admin dashboard, Zero Hit Radar display, and AI fallback consultation.
+15. Use a browser to verify that no CORS errors occur when the full stack starts.
+16. Create or update the root `README.md` and document the project purpose.
+17. Document the primary directory structure in `README.md`.
+18. Document the technology stack and service architecture in `README.md`.
+19. Document prerequisite tools, environment variables, and handling of `.env` or Compose environment values in `README.md`.
+20. Document local backend build/test/run steps in `README.md`.
+21. Document local frontend build/test/run steps in `README.md`.
+22. Document the full startup procedure using `docker compose up --build` in `README.md`.
+23. Document the primary URLs, initial admin login configuration, and fallback behavior when the AI key is not configured in `README.md`.
+24. Document the primary API endpoints, Zero Hit Radar behavior overview, troubleshooting, and test/coverage verification steps in `README.md`.
+25. Document the prohibition against committing secrets and the OSS publication checks in `README.md`.
 
-### 完了チェック
+### Phase 10 Completion Checklist
 
-- [ ] root `docker-compose.yml` に `db`、`backend`、`frontend` service が定義されている。
-- [ ] `db` service が PostgreSQL database、user、password、volume、healthcheck を持つ。
-- [ ] `backend` service が `db` に接続し、host port `8080` を公開している。
-- [ ] `frontend` service が host port `3000` を公開している。
-- [ ] `NEXT_PUBLIC_API_BASE_URL` が browser-resolvable な `http://localhost:8080` になっている。
-- [ ] container-internal backend URL が必要な場合だけ `INTERNAL_API_BASE_URL=http://backend:8080` として使われている。
-- [ ] `CORS_ALLOWED_ORIGINS` が `http://localhost:3000` を許可している。
-- [ ] frontend が PostgreSQL や AI provider に直接接続していない。
-- [ ] `docker compose up --build` で `frontend`、`backend`、`db` が一括起動する。
-- [ ] compose 起動後に product seed 100 件が登録される。
-- [ ] `http://localhost:3000` でトップページが表示される。
-- [ ] `http://localhost:8080/actuator/health` が healthy を返す。
-- [ ] 既存商品検索で商品カードが表示される。
-- [ ] 0 件検索で no-results state が表示され、Zero Hit が記録される。
-- [ ] admin login 後に Zero Hit Radar dashboard が表示される。
-- [ ] AI key 未設定でも AI consultation が fallback answer を返す。
-- [ ] browser console と network tab で CORS error が発生していない。
-- [ ] `README.md` にプロジェクト目的が記載されている。
-- [ ] `README.md` に主要ディレクトリ構成が記載されている。
-- [ ] `README.md` に build、test、local run、Docker Compose run の手順が記載されている。
-- [ ] `README.md` に環境変数、初期 admin credentials の設定方法、AI fallback、主要 URL が記載されている。
-- [ ] `README.md` に主要 API endpoint と Zero Hit Radar の動作概要が記載されている。
-- [ ] `README.md` にトラブルシューティングと OSS 公開前の secret 確認事項が記載されている。
-- [ ] `backend-design.md` の 14.2 と 15.3、および `front-design.md` の 6.3 と 11.2 と照合済みである。
+- [ ] The root `docker-compose.yml` defines `db`, `backend`, and `frontend` services.
+- [ ] The `db` service has a PostgreSQL database, user, password, volume, and healthcheck.
+- [ ] The `backend` service connects to `db` and exposes host port `8080`.
+- [ ] The `frontend` service exposes host port `3000`.
+- [ ] `NEXT_PUBLIC_API_BASE_URL` is set to the browser-resolvable `http://localhost:8080`.
+- [ ] `INTERNAL_API_BASE_URL=http://backend:8080` is used only when a container-internal backend URL is required.
+- [ ] `CORS_ALLOWED_ORIGINS` permits `http://localhost:3000`.
+- [ ] The frontend does not connect directly to PostgreSQL or the AI provider.
+- [ ] `docker compose up --build` starts `frontend`, `backend`, and `db` together.
+- [ ] The 100-record product seed is registered after Compose starts.
+- [ ] The home page is displayed at `http://localhost:3000`.
+- [ ] `http://localhost:8080/actuator/health` returns a healthy result.
+- [ ] Product cards appear when searching for existing products.
+- [ ] A zero-result search displays the no-results state and records a Zero Hit.
+- [ ] The Zero Hit Radar dashboard appears after admin login.
+- [ ] AI consultation returns a fallback answer even when the AI key is not configured.
+- [ ] No CORS errors appear in the browser console or network tab.
+- [ ] `README.md` documents the project purpose.
+- [ ] `README.md` documents the primary directory structure.
+- [ ] `README.md` documents build, test, local run, and Docker Compose run procedures.
+- [ ] `README.md` documents environment variables, initial admin credential configuration, AI fallback, and primary URLs.
+- [ ] `README.md` documents the primary API endpoints and an overview of Zero Hit Radar behavior.
+- [ ] `README.md` documents troubleshooting and pre-publication secret checks for OSS release.
+- [ ] Verified against sections 14.2 and 15.3 of `backend-design.md` and sections 6.3 and 11.2 of `front-design.md`.
 
-## 14. 最終受け入れ基準
+## 14. Final Acceptance Criteria
 
-全 Phase 完了後、次を満たした時点で backend implementation を完了とする。
+After all Phases are complete, the backend implementation is complete when the following criteria are satisfied.
 
-- [ ] Java 21 / Spring Boot backend が local と Docker compose の両方で起動する。
-- [ ] PostgreSQL migration と 100 件 product seed が再現可能である。
-- [ ] Product APIs が frontend contract どおりに応答する。
-- [ ] valid non-empty search かつ result count 0 の場合だけ Zero Hit が記録される。
-- [ ] normalized keyword と DB constraint により duplicate demand record が作られない。
-- [ ] admin login、token validation、admin authorization が Spring Security で実装されている。
-- [ ] Zero Hit Radar API が items と summary を正しく返す。
-- [ ] AI consultation API が Spring AI を主経路とし、API key 未設定時も fallback で利用できる。
-- [ ] error response、empty state 用 response、auth failure、AI failure が自然に扱える。
-- [ ] `/actuator/health` が public に確認でき、DB health を含む。
-- [ ] root `docker-compose.yml` により `frontend`、`backend`、`db` が一括起動する。
-- [ ] `docker compose up --build` 後、追加設定なしで基本デモが成立する。
-- [ ] `README.md` に目的、主要ディレクトリ構成、環境変数、ビルド、テスト、local 実行、Docker Compose 実行、主要 URL、トラブルシューティングが記載されている。
-- [ ] unit/integration/E2E または手動確認により主要ユーザージャーニーが検証済みである。
-- [ ] カバレッジ 80% 以上を目標にし、未達の場合は理由と追加テスト計画が明記されている。
-- [ ] OSS として公開しても問題ない品質、構成、命名、コメント、秘密情報管理になっている。
+- [ ] The Java 21 / Spring Boot backend starts both locally and with Docker Compose.
+- [ ] PostgreSQL migrations and the 100-record product seed are reproducible.
+- [ ] Product APIs respond according to the frontend contract.
+- [ ] A Zero Hit is recorded only for a valid non-empty search with a result count of 0.
+- [ ] The normalized keyword and DB constraint prevent duplicate demand records.
+- [ ] Admin login, token validation, and admin authorization are implemented with Spring Security.
+- [ ] The Zero Hit Radar API returns items and summary data correctly.
+- [ ] The AI consultation API uses Spring AI as its primary path and remains available through fallback when the API key is not configured.
+- [ ] Error responses, empty-state responses, authentication failures, and AI failures can be handled naturally.
+- [ ] `/actuator/health` is publicly accessible and includes DB health.
+- [ ] The root `docker-compose.yml` starts `frontend`, `backend`, and `db` together.
+- [ ] The basic demo works without additional configuration after `docker compose up --build`.
+- [ ] `README.md` documents the purpose, primary directory structure, environment variables, build, test, local execution, Docker Compose execution, primary URLs, and troubleshooting.
+- [ ] Core user journeys have been verified through unit/integration/E2E tests or manual verification.
+- [ ] Coverage targets at least 80%; if not achieved, the reason and an additional test plan are documented.
+- [ ] Quality, structure, naming, comments, and secret management are suitable for OSS publication.

@@ -1,33 +1,33 @@
 # Codex Ski Shop Frontend Implementation Plan
 
-## 1. 目的
+## 1. Purpose
 
-この実装計画は、[front-design.md](/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/spec-design/front-design.md) に記載された Next.js フロントエンドを、段階的かつ抜け漏れなく実装するための計画である。
+This implementation plan defines how to implement the Next.js frontend described in [front-design.md](/Users/yoterada/Documents/Ski-Shop-Zero-Hit-Radar/spec-design/front-design.md) incrementally and without omissions.
 
-実装は最大 9 フェーズに分ける。各フェーズの終了時には完了チェックを必ず実施し、次フェーズへ進む前に設計内容とのズレを確認する。
+The implementation is divided into a maximum of 9 phases. Complete the completion checklist at the end of each phase and verify alignment with the design before proceeding to the next phase.
 
-## 2. 実装方針
+## 2. Implementation Principles
 
-- 先に型定義と API クライアントを固め、画面実装時の接続ミスを減らす
-- 各画面は、読み込み中、空状態、成功、失敗の状態を必ず実装する
-- バックエンドへの接続は `NEXT_PUBLIC_API_BASE_URL` を使う
-- ブラウザからの API 呼び出しでは `http://localhost:8080` のようなブラウザ解決可能な URL を使い、`http://backend:8080` を直接使わない
-- 参考画像内の `Azure SkiShop` 表記はすべて `Codex Ski Shop` に置き換える
-- MVP 範囲外であるカート、購入、ユーザ登録、商品 CRUD は実装しない
+- Finalize the type definitions and API client first to reduce integration errors during page implementation
+- Implement loading, empty, success, and failure states for every page
+- Use `NEXT_PUBLIC_API_BASE_URL` for backend connections
+- For browser API calls, use a browser-resolvable URL such as `http://localhost:8080`; do not use `http://backend:8080` directly
+- Replace every `Azure SkiShop` label in the reference images with `Codex Ski Shop`
+- Do not implement the cart, checkout, user registration, or product CRUD features because they are outside the MVP scope
 
 ## Phase 1. Project Foundation
 
-### 実装対象
+### Phase 1 Implementation Scope
 
-- Next.js プロジェクトの作成または既存構成の確認
-- TypeScript 設定
-- App Router 構成
-- 基本ディレクトリ作成
-- 環境変数の雛形作成
-- lint / format / build コマンドの確認
-- lucide-react など設計書で利用する UI 依存関係の導入
+- Create the Next.js project or verify the existing structure
+- Configure TypeScript
+- Configure the App Router
+- Create the base directories
+- Create the environment variable template
+- Verify the lint / format / build commands
+- Install UI dependencies specified in the design, such as lucide-react
 
-### 作成・確認する主な構成
+### Primary Structure to Create or Verify
 
 ```text
 frontend
@@ -42,30 +42,30 @@ frontend
 └── .env.example
 ```
 
-### 完了チェック
+### Phase 1 Completion Checklist
 
-- [ ] `frontend` ディレクトリで Next.js アプリが起動できる
-- [ ] TypeScript が有効になっている
-- [ ] `src/app` ベースの App Router 構成になっている
-- [ ] `src/components`、`src/lib/api`、`src/types` が作成されている
-- [ ] `.env.example` に `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080` が記載されている
-- [ ] 必要に応じて `.env.example` に `INTERNAL_API_BASE_URL=http://backend:8080` が任意項目として記載されている
-- [ ] lucide-react が導入され、アイコン付きボタンを実装できる状態になっている
-- [ ] `npm run build` または採用した package manager の build コマンドが実行できる
-- [ ] `npm run lint` または採用した lint コマンドが実行できる
-- [ ] visible UI に `Azure SkiShop` ではなく `Codex Ski Shop` を使う方針が確認されている
+- [ ] The Next.js application starts from the `frontend` directory
+- [ ] TypeScript is enabled
+- [ ] The project uses an App Router structure based on `src/app`
+- [ ] `src/components`, `src/lib/api`, and `src/types` exist
+- [ ] `.env.example` contains `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`
+- [ ] When needed, `.env.example` contains `INTERNAL_API_BASE_URL=http://backend:8080` as an optional entry
+- [ ] lucide-react is installed and icon buttons can be implemented
+- [ ] `npm run build`, or the build command for the selected package manager, runs successfully
+- [ ] `npm run lint`, or the selected lint command, runs successfully
+- [ ] The policy to use `Codex Ski Shop` instead of `Azure SkiShop` in the visible UI is confirmed
 
 ## Phase 2. Shared Types and API Client
 
-### 実装対象
+### Phase 2 Implementation Scope
 
-- `front-design.md` の DTO を `src/types/api.ts` に実装
-- 共通 fetch wrapper の実装
-- API エラー正規化
-- 環境変数から API base URL を取得
-- 各 API モジュールの作成
+- Implement the DTOs from `front-design.md` in `src/types/api.ts`
+- Implement a shared fetch wrapper
+- Normalize API errors
+- Read the API base URL from environment variables
+- Create each API module
 
-### 実装する DTO
+### DTOs to Implement
 
 - `ProductDto`
 - `ProductListResponse`
@@ -80,7 +80,7 @@ frontend
 - `AiConsultResponse`
 - `ApiError`
 
-### 実装する API 関数
+### API Functions to Implement
 
 - `listProducts`
 - `searchProducts`
@@ -89,28 +89,28 @@ frontend
 - `listZeroHits`
 - `consultAi`
 
-### 完了チェック
+### Phase 2 Completion Checklist
 
-- [ ] `ProductDto` に `manufacturer`、`name`、`category`、`price`、`stockStatus`、`imageUrl` が含まれている
-- [ ] `ProductSearchResponse` に `zeroHitRecorded` が含まれている
-- [ ] `ZeroHitItemDto` に `priority`、`estimatedOpportunityLoss`、`firstSearchedAt`、`lastSearchedAt` が含まれている
-- [ ] `AiConsultRequest` が `keyword`、`question`、`hitCount`、`lastSearchedAt` を扱える
-- [ ] `AiConsultResponse` が `providerStatus: "LIVE" | "FALLBACK" | "ERROR"` を扱える
-- [ ] API client が `NEXT_PUBLIC_API_BASE_URL` を使っている
-- [ ] ブラウザ側 API base URL に `http://backend:8080` を使っていない
-- [ ] admin API で `Authorization: Bearer ${token}` を付与できる
-- [ ] Spring `ProblemDetail` の `detail`、`title`、`message` を user-facing message に変換できる
-- [ ] 400 はフォーム近くの validation message として扱える
-- [ ] 401 は token clear と `/login` redirect に使える
-- [ ] 403 は access denied 表示に変換できる
-- [ ] 404 は route に応じて not found または empty state に変換できる
-- [ ] 500 は retry 可能な service error 表示に変換できる
-- [ ] API client の URL 組み立てを単体で確認できる
-- [ ] `listProducts`、`searchProducts`、`login`、`getMe`、`listZeroHits`、`consultAi` が Endpoint Contract と同じパスを使っている
+- [ ] `ProductDto` includes `manufacturer`, `name`, `category`, `price`, `stockStatus`, and `imageUrl`
+- [ ] `ProductSearchResponse` includes `zeroHitRecorded`
+- [ ] `ZeroHitItemDto` includes `priority`, `estimatedOpportunityLoss`, `firstSearchedAt`, and `lastSearchedAt`
+- [ ] `AiConsultRequest` supports `keyword`, `question`, `hitCount`, and `lastSearchedAt`
+- [ ] `AiConsultResponse` supports `providerStatus: "LIVE" | "FALLBACK" | "ERROR"`
+- [ ] The API client uses `NEXT_PUBLIC_API_BASE_URL`
+- [ ] The browser-side API base URL does not use `http://backend:8080`
+- [ ] The admin API can include `Authorization: Bearer ${token}`
+- [ ] Spring `ProblemDetail` fields `detail`, `title`, and `message` can be converted into a user-facing message
+- [ ] A 400 response can be handled as a validation message near the form
+- [ ] A 401 response can be used to clear the token and redirect to `/login`
+- [ ] A 403 response can be converted into an access denied message
+- [ ] A 404 response can be converted into a not found or empty state according to the route
+- [ ] A 500 response can be converted into a retryable service error message
+- [ ] API client URL construction can be verified independently
+- [ ] `listProducts`, `searchProducts`, `login`, `getMe`, `listZeroHits`, and `consultAi` use the same paths as the Endpoint Contract
 
 ## Phase 3. Shared UI, Layout, and Formatting Utilities
 
-### 実装対象
+### Phase 3 Implementation Scope
 
 - `AppLayout`
 - `Header`
@@ -121,160 +121,160 @@ frontend
 - stock status label mapper
 - priority label mapper
 - responsive base styling
-- lucide-react icons の導入
-- アクセシブルなフォーム label / aria-label / disabled state の共通方針
+- lucide-react icons
+- Shared conventions for accessible form labels / aria-labels / disabled states
 
-### UI 方針
+### UI Principles
 
-- ヘッダーは `Codex Ski Shop` ブランドを表示する
-- ナビゲーションは `Home`、`Products`、`Login` を基本とする
-- 管理者ログイン後は Admin dashboard へ移動できる導線を表示する
-- `stockStatus` は `IN_STOCK`、`LOW_STOCK`、`OUT_OF_STOCK` を `在庫あり`、`残りわずか`、`在庫なし` に変換する
-- `priority` は `HIGH`、`MEDIUM`、`LOW` を分かりやすいラベルまたはバッジで表示する
+- The header displays the `Codex Ski Shop` brand
+- The primary navigation includes `Home`, `Products`, and `Login`
+- After an administrator logs in, display a navigation path to the Admin dashboard
+- Map `stockStatus` values `IN_STOCK`, `LOW_STOCK`, and `OUT_OF_STOCK` to `In stock`, `Low stock`, and `Out of stock`
+- Display `priority` values `HIGH`, `MEDIUM`, and `LOW` with clear labels or badges
 
-### 完了チェック
+### Phase 3 Completion Checklist
 
-- [ ] `Header` に `Codex Ski Shop` が表示される
-- [ ] `Header` から `/`、`/products`、`/login` へ移動できる
-- [ ] 認証済み状態では `Header` から admin dashboard へ移動できる
-- [ ] `SearchBar` が入力、送信、loading disabled 状態に対応している
-- [ ] `SearchBar` に label または aria-label が設定されている
-- [ ] 価格が `¥98,000` のような日本円表記になる
-- [ ] 日時が管理画面で読める形式に整形される
-- [ ] `stockStatus` の日本語表示が実装されている
-- [ ] `priority` の表示が実装されている
-- [ ] loading、empty、error の共通表示が使える
-- [ ] ボタンは loading / disabled 状態が視覚的にも支援技術向けにも分かる
-- [ ] キーボード操作で主要なリンク、入力欄、ボタンに移動できる
-- [ ] モバイル幅でヘッダーやボタンのテキストがはみ出さない
+- [ ] `Header` displays `Codex Ski Shop`
+- [ ] `Header` provides navigation to `/`, `/products`, and `/login`
+- [ ] In the authenticated state, `Header` provides navigation to the admin dashboard
+- [ ] `SearchBar` supports input, submission, and a disabled loading state
+- [ ] `SearchBar` has a label or aria-label
+- [ ] Prices use Japanese yen formatting such as `¥98,000`
+- [ ] Date and time values are formatted legibly for the admin page
+- [ ] Localized `stockStatus` labels are implemented
+- [ ] `priority` labels are implemented
+- [ ] Shared loading, empty, and error displays are available
+- [ ] Button loading / disabled states are clear both visually and to assistive technologies
+- [ ] Primary links, inputs, and buttons are reachable by keyboard
+- [ ] Header and button text does not overflow at mobile widths
 
 ## Phase 4. Product Components and Public Product Experience
 
-### 実装対象
+### Phase 4 Implementation Scope
 
 - `ProductCard`
 - `ProductGrid`
-- `/products` ページ
-- 商品一覧 API 接続
-- 商品検索 API 接続
-- ページタイトル表示
-- total count 表示
-- カテゴリフィルタ
-- ソート
-- 検索結果件数表示
-- 0 件検索時の no-results state
+- `/products` page
+- Product list API integration
+- Product search API integration
+- Page title display
+- total count display
+- Category filter
+- Sorting
+- Search result count display
+- no-results state for searches returning 0 results
 
-### 使用する API
+### Phase 4 APIs to Use
 
 - `GET /api/products?limit=&category=&sort=`
 - `GET /api/products/search?q=&category=&sort=`
 
-### 完了チェック
+### Phase 4 Completion Checklist
 
-- [ ] `/products` にアクセスできる
-- [ ] ページタイトルと総件数が表示される
-- [ ] 初期表示で商品一覧を取得して表示できる
-- [ ] 商品カードに `manufacturer`、`name`、`price`、`stockStatus` が表示される
-- [ ] 商品カードに `category` またはカテゴリバッジが表示される
-- [ ] 商品画像またはカテゴリプレースホルダーが表示される
-- [ ] 商品カードのレイアウトが `images/products-list.png` の方向性に合っている
-- [ ] カテゴリフィルタに all、skis、boots、wear、accessories、poles、goggles 相当の選択肢がある
-- [ ] カテゴリフィルタで API query の `category` が変わる
-- [ ] ソートに newest、price low to high、price high to low 相当の選択肢がある
-- [ ] ソートで API query の `sort` が変わる
-- [ ] 検索結果件数が表示される
-- [ ] 存在する商品キーワードで検索結果が表示される
-- [ ] 存在しないキーワードで 0 件状態が表示される
-- [ ] 0 件検索時に frontend 側で別途 Zero Hit 登録 API を呼ばず、search API のみを呼んでいる
-- [ ] 検索中に重複 submit が抑制される
-- [ ] API エラー時に画面全体が壊れない
+- [ ] `/products` is accessible
+- [ ] The page title and total count are displayed
+- [ ] The initial view retrieves and displays the product list
+- [ ] Each product card displays `manufacturer`, `name`, `price`, and `stockStatus`
+- [ ] Each product card displays `category` or a category badge
+- [ ] Each product card displays a product image or category placeholder
+- [ ] The product card layout follows the visual direction of `images/products-list.png`
+- [ ] The category filter provides options equivalent to all, skis, boots, wear, accessories, poles, and goggles
+- [ ] The category filter changes the API query `category`
+- [ ] Sorting provides options equivalent to newest, price low to high, and price high to low
+- [ ] Sorting changes the API query `sort`
+- [ ] The search result count is displayed
+- [ ] Searching for an existing product keyword displays matching results
+- [ ] Searching for a nonexistent keyword displays a 0-result state
+- [ ] For a 0-result search, the frontend calls only the search API and does not separately call a Zero Hit registration API
+- [ ] Duplicate submissions are prevented while searching
+- [ ] An API error does not break the entire page
 
 ## Phase 5. Top Page Experience
 
-### 実装対象
+### Phase 5 Implementation Scope
 
-- `/` トップページ
-- ヒーローエリア
-- 商品プレビュー 20 件表示
-- トップページ検索
-- 検索状態ごとの表示切り替え
-- `/products` への導線
-- 参考画像に基づくビジュアル調整
+- `/` top page
+- Hero area
+- Display a 20-item product preview
+- Top-page search
+- Conditional rendering for each search state
+- Navigation to `/products`
+- Visual adjustments based on the reference image
 
-### 使用する API
+### Phase 5 APIs to Use
 
 - `GET /api/products?limit=20&sort=createdAt,desc`
 - `GET /api/products/search?q=&category=&sort=`
 
-### 完了チェック
+### Phase 5 Completion Checklist
 
-- [ ] `/` にアクセスできる
-- [ ] ファーストビューで `Codex Ski Shop` が明確に見える
-- [ ] `images/Top-page-after-login.png` の青基調・ヘッダー・ヒーローの方向性を踏まえている
-- [ ] 初期表示で最大 20 件の商品プレビューが表示される
-- [ ] トップページから商品検索できる
-- [ ] トップページ検索中に重複 submit が抑制される
-- [ ] 検索結果ありの場合、商品カードが表示される
-- [ ] 検索結果なしの場合、自然な 0 件表示になる
-- [ ] API error の場合、トップページ全体が壊れず retry 可能な表示になる
-- [ ] 「商品を見る」または同等の導線で `/products` に移動できる
-- [ ] `Azure SkiShop` という表示が残っていない
-- [ ] PC とモバイルでヒーロー、検索欄、商品カードが重ならない
+- [ ] `/` is accessible
+- [ ] `Codex Ski Shop` is clearly visible in the first viewport
+- [ ] The page reflects the blue palette, header, and hero direction in `images/Top-page-after-login.png`
+- [ ] The initial view displays a preview of up to 20 products
+- [ ] Products can be searched from the top page
+- [ ] Duplicate submissions are prevented while searching from the top page
+- [ ] Product cards are displayed when search results exist
+- [ ] A natural 0-result state is displayed when no search results exist
+- [ ] For an API error, the top page remains functional and displays a retryable state
+- [ ] A `View products` action, or an equivalent navigation path, opens `/products`
+- [ ] No `Azure SkiShop` label remains
+- [ ] The hero, search field, and product cards do not overlap on desktop or mobile
 
 ## Phase 6. Authentication and Login
 
-### 実装対象
+### Phase 6 Implementation Scope
 
-- `/login` ページ
+- `/login` page
 - `LoginForm`
 - `authToken` utility
-- `POST /api/auth/login` 接続
-- `GET /api/auth/me` 接続
+- `POST /api/auth/login` integration
+- `GET /api/auth/me` integration
 - admin route guard
-- Header の認証状態反映
-- 401 時の token clear と redirect
+- Reflect authentication state in `Header`
+- Clear the token and redirect after a 401 response
 
-### 認証方針
+### Authentication Policy
 
-MVP では `sessionStorage` に token を保存してよい。より安全な構成にする場合は Next.js route handler と HttpOnly cookie を利用する。
+For the MVP, the token may be stored in `sessionStorage`. For a more secure architecture, use a Next.js route handler and an HttpOnly cookie.
 
-### 完了チェック
+### Phase 6 Completion Checklist
 
-- [ ] `/login` にアクセスできる
-- [ ] ログイン画面が `images/login-screen.png` の方向性に合っている
-- [ ] `Codex Ski Shop` の管理者ログイン画面であることが分かる
-- [ ] username と password を入力できる
-- [ ] login API 成功時に token を保存できる
-- [ ] token は MVP 方針どおり `sessionStorage` または HttpOnly cookie 経由で一貫して扱われている
-- [ ] login API 成功時に `/admin/dashboard` へ遷移する
-- [ ] login API 失敗時にエラーメッセージが表示される
-- [ ] `success=false` または `401 Unauthorized` を失敗として扱う
-- [ ] `/admin/dashboard` 表示前に `GET /api/auth/me` で認証確認する
-- [ ] 未認証で `/admin/dashboard` にアクセスした場合、`/login` にリダイレクトされる
-- [ ] 401 応答時に token が削除される
-- [ ] 認証済み状態では Header に admin dashboard への導線が表示される
-- [ ] logout または token clear 後は admin dashboard への導線が消える、または未認証扱いになる
+- [ ] `/login` is accessible
+- [ ] The login page follows the visual direction of `images/login-screen.png`
+- [ ] The page is clearly identified as the `Codex Ski Shop` administrator login
+- [ ] The user can enter a username and password
+- [ ] The token can be stored after a successful login API response
+- [ ] The token is handled consistently through `sessionStorage` or an HttpOnly cookie, according to the MVP policy
+- [ ] A successful login API response navigates to `/admin/dashboard`
+- [ ] A failed login API response displays an error message
+- [ ] `success=false` or `401 Unauthorized` is treated as a failure
+- [ ] Before displaying `/admin/dashboard`, authentication is verified with `GET /api/auth/me`
+- [ ] An unauthenticated request to `/admin/dashboard` redirects to `/login`
+- [ ] A 401 response removes the token
+- [ ] In the authenticated state, Header displays a navigation path to the admin dashboard
+- [ ] After logout or token clearing, the admin dashboard navigation path disappears or the user is treated as unauthenticated
 
 ## Phase 7. Admin Dashboard and Zero Hit Radar
 
-### 実装対象
+### Phase 7 Implementation Scope
 
 - `/admin/dashboard`
 - `AdminLayout`
 - `ZeroHitSummaryCards`
 - `ZeroHitTable`
-- 期間フィルタ 7 / 30 / 90 日
-- sort / limit query の初期値設定
-- refresh 操作
+- 7 / 30 / 90-day period filter
+- Default sort / limit query values
+- refresh action
 - empty state
 - Zero Hit keyword selection
 
-### 使用する API
+### Phase 7 APIs to Use
 
 - `GET /api/auth/me`
 - `GET /api/admin/zero-hits?days=&sort=&limit=`
 
-### 表示項目
+### Display Fields
 
 - zero hit keyword count
 - search volume
@@ -286,122 +286,122 @@ MVP では `sessionStorage` に token を保存してよい。より安全な構
 - last searched at
 - estimated opportunity loss
 
-### 完了チェック
+### Phase 7 Completion Checklist
 
-- [ ] `/admin/dashboard` は認証済み管理者のみ表示できる
-- [ ] 管理画面が `images/admin-dash-board-zero-hit.png` の方向性に合っている
-- [ ] Zero Hit summary cards が表示される
-- [ ] Zero Hit table/list が表示される
-- [ ] `keyword` が表示される
-- [ ] `hitCount` が表示される
-- [ ] `priority` が表示される
-- [ ] `estimatedOpportunityLoss` が日本円として表示される
-- [ ] `firstSearchedAt` と `lastSearchedAt` が読める日時で表示される
-- [ ] 7 / 30 / 90 日の期間フィルタが API query の `days` に反映される
-- [ ] `sort` と `limit` の初期値が API query として破綻しない
-- [ ] refresh 操作で最新データを再取得できる
-- [ ] Zero Hit が空の場合、自然な empty state が表示される
-- [ ] API エラー時に管理画面全体が壊れない
-- [ ] キーワードを選択すると AI 相談パネルに引き継げる
+- [ ] `/admin/dashboard` is visible only to authenticated administrators
+- [ ] The admin page follows the visual direction of `images/admin-dash-board-zero-hit.png`
+- [ ] Zero Hit summary cards are displayed
+- [ ] The Zero Hit table/list is displayed
+- [ ] `keyword` is displayed
+- [ ] `hitCount` is displayed
+- [ ] `priority` is displayed
+- [ ] `estimatedOpportunityLoss` is displayed in Japanese yen
+- [ ] `firstSearchedAt` and `lastSearchedAt` are displayed as legible date and time values
+- [ ] The 7 / 30 / 90-day period filter updates the API query `days`
+- [ ] The initial `sort` and `limit` values produce a valid API query
+- [ ] The refresh action retrieves the latest data
+- [ ] A natural empty state is displayed when there are no Zero Hits
+- [ ] An API error does not break the entire admin page
+- [ ] Selecting a keyword passes it to the AI consultation panel
 
 ## Phase 8. AI Consultation Panel
 
-### 実装対象
+### Phase 8 Implementation Scope
 
 - `AiConsultPanel`
-- selected keyword 表示
-- free-form question 入力
-- `POST /api/admin/ai-consult` 接続
-- AI sending / success / failure state
-- provider status 表示
+- selected keyword display
+- free-form question input
+- `POST /api/admin/ai-consult` integration
+- AI sending / success / failure states
+- provider status display
 
-### 使用する API
+### API to Use
 
 - `POST /api/admin/ai-consult`
 
-### 送信するデータ
+### Data to Send
 
 - `keyword`
 - `question`
 - `hitCount`
 - `lastSearchedAt`
 
-### 完了チェック
+### Phase 8 Completion Checklist
 
-- [ ] Zero Hit keyword を選択すると AI 相談対象として表示される
-- [ ] 任意の質問文を入力できる
-- [ ] question が空の場合は送信しない
-- [ ] 送信中は send button が disabled になる
-- [ ] request body に `keyword`、`question`、`hitCount`、`lastSearchedAt` が含まれる
-- [ ] 成功時に `answer` が読みやすく表示される
-- [ ] `providerStatus` が `LIVE`、`FALLBACK`、`ERROR` のいずれでも破綻しない
-- [ ] 失敗時に質問文が消えず、再送できる
-- [ ] 401 の場合は token を削除して `/login` に遷移する
-- [ ] AI 未設定時の fallback または error 表示が自然である
+- [ ] Selecting a Zero Hit keyword displays it as the AI consultation subject
+- [ ] The user can enter any question
+- [ ] The question is not submitted when it is empty
+- [ ] The send button is disabled during submission
+- [ ] The request body includes `keyword`, `question`, `hitCount`, and `lastSearchedAt`
+- [ ] On success, `answer` is displayed legibly
+- [ ] The UI remains functional for every `providerStatus` value: `LIVE`, `FALLBACK`, and `ERROR`
+- [ ] On failure, the question remains available and can be resubmitted
+- [ ] A 401 response removes the token and navigates to `/login`
+- [ ] When AI is not configured, the fallback or error state appears natural
 
 ## Phase 9. Docker, Verification, and Polish
 
-### 実装対象
+### Phase 9 Implementation Scope
 
 - frontend Dockerfile
 - Docker multi-stage build
-- docker compose 接続確認
-- 環境変数確認
-- レスポンシブ調整
-- アクセシビリティ確認
-- Playwright E2E 検証
-- unit test または最低限の utility test
-- 最終デザイン polish
+- Verify the docker compose connection
+- Verify environment variables
+- Responsive adjustments
+- Accessibility verification
+- Playwright E2E verification
+- unit tests or, at minimum, utility tests
+- Final design polish
 
-### Docker / Compose 要点
+### Docker / Compose Key Points
 
-- frontend は host port `3000` でアクセスできる
-- backend は host port `8080` でアクセスできる
-- browser-side frontend は `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080` を使う
-- container-to-container call が必要な場合のみ `INTERNAL_API_BASE_URL=http://backend:8080` を使う
-- CORS は backend 側で `http://localhost:3000` が許可されている必要がある
+- frontend is accessible on host port `3000`
+- backend is accessible on host port `8080`
+- The browser-side frontend uses `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`
+- Use `INTERNAL_API_BASE_URL=http://backend:8080` only when a container-to-container call is required
+- CORS on the backend must allow `http://localhost:3000`
 
-### 完了チェック
+### Phase 9 Completion Checklist
 
-- [ ] `docker compose up --build` で frontend / backend / db が起動する
-- [ ] frontend Dockerfile が `deps`、`builder`、`runner` 相当の multi-stage build になっている
-- [ ] `http://localhost:3000` でトップページが表示される
-- [ ] frontend から backend API へ CORS エラーなしで接続できる
-- [ ] `http://backend:8080` を browser-side code で使っていない
-- [ ] トップページで `Codex Ski Shop` が表示される
-- [ ] 商品 20 件が表示される
-- [ ] 存在する商品検索で商品カードが表示される
-- [ ] 存在しない商品検索で 0 件表示になり、Zero Hit Radar に反映される
-- [ ] 管理者ログイン後 `/admin/dashboard` に遷移する
-- [ ] Zero Hit Radar に keyword、hit count、priority、estimated opportunity loss が表示される
-- [ ] AI 相談が成功、fallback、error のいずれでも画面が壊れない
-- [ ] PC 幅でトップ、商品一覧、ログイン、管理画面が破綻しない
-- [ ] モバイル幅でトップ、商品一覧、ログイン、管理画面が破綻しない
-- [ ] ボタン、入力欄、テーブル、カード内のテキストがはみ出さない
-- [ ] `Azure SkiShop` という表示が残っていない
-- [ ] 主要画面で loading、empty、error state が確認できる
-- [ ] Playwright でトップ、商品検索、ログイン、管理画面、AI 相談の主要シナリオを確認できる
-- [ ] currency formatting、date formatting、auth token utility、API client URL construction のいずれかに unit test または手動確認がある
-- [ ] 入力欄に label または aria-label がある
-- [ ] キーボード操作で主要操作を完了できる
-- [ ] 色だけに依存したエラー表示や状態表示になっていない
+- [ ] `docker compose up --build` starts frontend / backend / db
+- [ ] The frontend Dockerfile uses a multi-stage build equivalent to `deps`, `builder`, and `runner`
+- [ ] The top page is displayed at `http://localhost:3000`
+- [ ] The frontend connects to the backend API without CORS errors
+- [ ] Browser-side code does not use `http://backend:8080`
+- [ ] The top page displays `Codex Ski Shop`
+- [ ] 20 products are displayed
+- [ ] Searching for an existing product displays product cards
+- [ ] Searching for a nonexistent product displays a 0-result state and is reflected in Zero Hit Radar
+- [ ] After administrator login, the application navigates to `/admin/dashboard`
+- [ ] Zero Hit Radar displays keyword, hit count, priority, and estimated opportunity loss
+- [ ] The page remains functional whether AI consultation succeeds, falls back, or returns an error
+- [ ] The top page, product list, login page, and admin page remain functional at desktop widths
+- [ ] The top page, product list, login page, and admin page remain functional at mobile widths
+- [ ] Text does not overflow buttons, inputs, tables, or cards
+- [ ] No `Azure SkiShop` label remains
+- [ ] Loading, empty, and error states can be verified on the primary pages
+- [ ] Playwright can verify the primary scenarios for the top page, product search, login, admin page, and AI consultation
+- [ ] A unit test or manual verification exists for at least one of currency formatting, date formatting, the auth token utility, or API client URL construction
+- [ ] Each input has a label or aria-label
+- [ ] Primary actions can be completed by keyboard
+- [ ] Error and status displays do not rely on color alone
 
-## 3. 最終受け入れチェック
+## 3. Final Acceptance Checklist
 
-すべてのフェーズ完了後、以下を確認する。
+After all phases are complete, verify the following.
 
-- [ ] `front-design.md` の Page Ownership に記載された 4 画面が実装されている
-- [ ] `front-design.md` の DTO と実装上の TypeScript 型が一致している
-- [ ] `front-design.md` の Endpoint Contract に記載された API 関数がすべて実装されている
-- [ ] `front-design.md` の Component Responsibilities に記載された主要コンポーネントが実装されている
-- [ ] `front-design.md` の Error Contract に記載された 400 / 401 / 403 / 404 / 500 の扱いが実装されている
-- [ ] frontend は PostgreSQL や AI provider を直接呼び出していない
-- [ ] Zero Hit 登録は frontend ではなく backend の search API に委譲されている
-- [ ] 管理者 API には Bearer token が付与されている
-- [ ] 未認証状態で admin dashboard を表示できない
-- [ ] 参考画像 4 点の意図が各画面に反映されている
-- [ ] `Codex Ski Shop` として統一された見た目になっている
-- [ ] Docker compose で動作確認できる
-- [ ] Playwright または同等の手動 E2E シナリオで主要導線が確認されている
-- [ ] アクセシビリティとレスポンシブの最低限の確認が完了している
-- [ ] OSS として公開しても未完成に見えない UX になっている
+- [ ] The 4 pages listed under Page Ownership in `front-design.md` are implemented
+- [ ] The DTOs in `front-design.md` match the implemented TypeScript types
+- [ ] Every API function listed in the Endpoint Contract in `front-design.md` is implemented
+- [ ] The primary components listed under Component Responsibilities in `front-design.md` are implemented
+- [ ] Handling for 400 / 401 / 403 / 404 / 500, as specified in the Error Contract in `front-design.md`, is implemented
+- [ ] The frontend does not call PostgreSQL or the AI provider directly
+- [ ] Zero Hit registration is delegated to the backend search API, not performed by the frontend
+- [ ] A Bearer token is included with administrator API requests
+- [ ] The admin dashboard cannot be displayed in an unauthenticated state
+- [ ] The intent of all 4 reference images is reflected in the respective pages
+- [ ] The visual presentation consistently uses `Codex Ski Shop`
+- [ ] Operation can be verified with Docker compose
+- [ ] Primary navigation paths are verified with Playwright or equivalent manual E2E scenarios
+- [ ] Minimum accessibility and responsive behavior verification is complete
+- [ ] The UX does not appear incomplete when published as OSS

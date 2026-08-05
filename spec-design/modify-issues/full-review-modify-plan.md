@@ -1,188 +1,188 @@
 # Full Review Modify Plan
 
-作成日: 2026-06-04  
-対象: `backend`  
-参照レビュー: `review-reports/manual-backend-full/backend/check-report-1.md`  
-対象重要度: Critical / High
+Created: 2026-06-04
+Scope: `backend`
+Reference review: `review-reports/manual-backend-full/backend/check-report-1.md`
+Target severities: Critical / High
 
-## 1. 方針
+## 1. Policy
 
-`check-report-1.md` の Critical / High は、同じ根本原因を複数エージェントが別観点で指摘しているものが多い。したがって本計画では、指摘番号を個別に逐次修正するのではなく、実装上の責務単位で束ねて対応する。
+Many Critical / High findings in `check-report-1.md` describe the same root cause from the perspectives of different agents. Therefore, this plan groups remediation work by implementation responsibility instead of addressing each finding number sequentially and independently.
 
-優先順位は次の順に置く。
+Use the following priority order.
 
-1. セキュリティ、入力検証、秘密情報、認証保護
-2. zero-hit 記録のデータ整合性と並行実行安全性
-3. AI provider 境界の resilience、timeout、transaction 分離
-4. エラー、ログ、相関 ID、セキュリティヘッダー
-5. API 契約、REST semantics、pagination、data access 最適化
-6. ドメインモデル、パッケージ標準、依存関係、テスト品質
+1. Security, input validation, secrets, and authentication protection
+2. Data integrity and concurrency safety for zero-hit recording
+3. Resilience, timeout handling, and transaction separation at the AI provider boundary
+4. Errors, logging, correlation IDs, and security headers
+5. API contracts, REST semantics, pagination, and data-access optimization
+6. Domain model, package conventions, dependencies, and test quality
 
-## 2. Critical / High 指摘の対応マップ
+## 2. Critical / High Finding Remediation Map
 
-| 対応テーマ | 対象指摘 |
+| Remediation theme | Findings |
 | --- | --- |
-| 入力検証とサイズ制限 | #7, #8, #9, #15, #39 |
-| zero-hit の upsert / concurrency / aggregate invariant | #1, #3, #4, #18, #29 |
-| GET search の副作用分離 | #6, #37 |
-| 管理者認証の brute force 対策と token lifecycle | #36, #40 |
-| 設定 profile / secret / TLS / virtual threads | #19, #26, #31, #33, #34, #35 |
-| AI provider resilience / timeout / transaction 境界 | #20, #64, #76, #77 |
-| error response / logging / correlation / security headers / PII logging | #11, #21, #22, #23, #24, #25, #32, #38, #41, #44 |
-| data access / entity / null safety / pagination / projection | #2, #5, #10, #14, #16, #17, #27, #28, #30, #43, #68, #69, #70, #71 |
-| test / dependency / release hygiene | #12, #13, #42, #45, #46 |
+| Input validation and size limits | #7, #8, #9, #15, #39 |
+| Zero-hit upsert / concurrency / aggregate invariants | #1, #3, #4, #18, #29 |
+| Separation of GET search side effects | #6, #37 |
+| Brute-force protection and token lifecycle for administrator authentication | #36, #40 |
+| Configuration profiles / secrets / TLS / virtual threads | #19, #26, #31, #33, #34, #35 |
+| AI provider resilience / timeout / transaction boundaries | #20, #64, #76, #77 |
+| Error responses / logging / correlation / security headers / PII logging | #11, #21, #22, #23, #24, #25, #32, #38, #41, #44 |
+| Data access / entities / null safety / pagination / projections | #2, #5, #10, #14, #16, #17, #27, #28, #30, #43, #68, #69, #70, #71 |
+| Test / dependency / release hygiene | #12, #13, #42, #45, #46 |
 
-## 3. 実装フェーズ
+## 3. Implementation Phases
 
-### Phase A: 先に決めるべき設計判断
+### Phase A: Design Decisions Required Before Implementation
 
-次の項目は、実装を始める前にプロジェクト標準として決める。推奨判断も併記する。
+Decide the following items as project standards before implementation begins. Recommended decisions are included.
 
-| 判断項目 | 推奨判断 | 理由 |
+| Decision item | Recommended decision | Rationale |
 | --- | --- | --- |
-| `GET /api/products/search` が zero-hit を記録してよいか | GET は read-only にし、zero-hit 記録は `POST /api/zero-hit-searches` または `POST /api/products/search-events` に分離する | HTTP safe method の原則、キャッシュ、bot / CSRF 的な汚染リスクを避けるため。現行 `backend-design.md` には GET で記録する記述があるため、設計書と frontend API 呼び出しも同時更新する。 |
-| Error response を `ApiErrorResponse` のままにするか | Spring `ProblemDetail` / RFC 9457 shape に移行する | レビュー標準に合わせる。frontend は `message` / `detail` / `title` を吸収できる実装にして、破壊的変更を最小化する。 |
-| entity package を `entity` のままにするか `model` に移すか | OSS 品質の標準として `com.skishop.model` に移行し、DTO は `dto.request` / `dto.response` に分割する。ただしこの変更は最後の構造整理フェーズで行う | 機能修正と package rename を同時に行うと差分が読みにくくなるため、先に correctness を直す。 |
-| Primary key を PostgreSQL `UUID` のままにするか String UUID にするか | PostgreSQL / Hibernate の型安全性を優先し、`UUID` は維持する。レビュー標準が String UUID を必須にする場合のみ別途 migration を作る | `backend-design.md` と migration は UUID を前提にしている。String 化は広範囲な API / DB 変更になり、品質向上より破壊リスクが大きい。 |
-| AI retry を入れてよいか | 低回数 retry と circuit breaker を provider 境界に入れる。token cost を抑えるため、network / transient error のみに限定する | live provider 障害で request path が詰まることを避ける。fallback は維持する。 |
-| TLS | Spring Boot 直 SSL ではなく reverse proxy / load balancer 終端を標準にし、`server.forward-headers-strategy=framework` と HSTS 条件を整理する | docker compose demo と production 想定を分けやすい。 |
+| Whether `GET /api/products/search` may record a zero hit | Make GET read-only and separate zero-hit recording into `POST /api/zero-hit-searches` or `POST /api/products/search-events` | This avoids violating HTTP safe-method principles and prevents cache, bot, or CSRF-like data pollution risks. The current `backend-design.md` states that GET performs recording, so update the design document and frontend API calls at the same time. |
+| Whether to retain `ApiErrorResponse` for error responses | Migrate to the Spring `ProblemDetail` / RFC 9457 shape | Align with the review standard. Make the frontend accept `message` / `detail` / `title` to minimize breaking changes. |
+| Whether to retain the `entity` package or move it to `model` | As an OSS-quality convention, migrate to `com.skishop.model` and split DTOs into `dto.request` / `dto.response`. Perform this change in the final structural cleanup phase | Combining functional fixes with a package rename makes the diff difficult to review, so correct behavior first. |
+| Whether to retain PostgreSQL `UUID` primary keys or use String UUIDs | Prioritize PostgreSQL / Hibernate type safety and retain `UUID`. Create a separate migration only if the review standard requires String UUIDs | `backend-design.md` and the migrations assume UUIDs. Converting to String would create broad API / DB changes with greater breakage risk than quality benefit. |
+| Whether AI retries are permitted | Add a low retry count and a circuit breaker at the provider boundary. Restrict retries to network / transient errors to control token cost | Prevent a live provider outage from blocking the request path. Retain the fallback. |
+| TLS | Standardize on reverse-proxy / load-balancer termination rather than direct Spring Boot SSL, and define `server.forward-headers-strategy=framework` and HSTS conditions | This cleanly separates the Docker Compose demo from production assumptions. |
 
-### Phase B: セキュリティと validation の即時対応
+### Phase B: Immediate Security and Validation Remediation
 
-#### B-1. Controller query parameter validation
+#### B-1. Controller Query Parameter Validation
 
-対象指摘: #7, #8, #39  
-対象ファイル: `ProductController`, `AdminZeroHitController`, `GlobalExceptionHandler`, `application.yml`
+Findings: #7, #8, #39
+Files: `ProductController`, `AdminZeroHitController`, `GlobalExceptionHandler`, `application.yml`
 
-現状:
+Current state:
 
-- `ProductController` と `AdminZeroHitController` は `@Validated` がなく、query parameter は service 側の `IllegalArgumentException` に依存している。
-- `limit`, `days`, `sort`, `q`, `category` に Bean Validation の境界がない。
-- request body / free text のサイズ上限が application config と DTO の両方で不足している。
+- `ProductController` and `AdminZeroHitController` do not have `@Validated`, and query parameters depend on service-layer `IllegalArgumentException` handling.
+- `limit`, `days`, `sort`, `q`, and `category` have no Bean Validation boundaries.
+- Request-body and free-text size limits are insufficient in both application configuration and DTOs.
 
-最適な修正:
+Optimal remediation:
 
-- controller に `@Validated` を付与する。
-- query parameter に Bean Validation を追加する。
+- Add `@Validated` to the controllers.
+- Add Bean Validation to query parameters.
   - `limit`: `@Min(1) @Max(100)`
   - `days`: `@Min(1) @Max(365)`
   - `q`: `@Size(max = 100)`
   - `category`: `@Size(max = 80)`
   - product sort: `createdAt,desc|price,asc|price,desc`
   - zero-hit sort: `hitCount,desc|lastSearchedAt,desc`
-- `HandlerMethodValidationException` と `ConstraintViolationException` を 400 として扱う。
-- Tomcat の request limit を設定する。
+- Handle `HandlerMethodValidationException` and `ConstraintViolationException` as 400 responses.
+- Configure Tomcat request limits.
   - `server.tomcat.max-http-form-post-size`
   - `server.tomcat.max-swallow-size`
   - `server.max-http-request-header-size`
-- service 側の validation は defense in depth として残す。
+- Retain service-layer validation as defense in depth.
 
-検証:
+Validation:
 
-- `GET /api/products?limit=0` が 400。
-- `GET /api/products?limit=101` が 400。
-- `GET /api/products/search?q=<101文字以上>` が 400。
-- `GET /api/admin/zero-hits?days=0` が 400。
-- `GET /api/admin/zero-hits?sort=bad` が 400。
+- `GET /api/products?limit=0` returns 400.
+- `GET /api/products?limit=101` returns 400.
+- `GET /api/products/search?q=<101 or more characters>` returns 400.
+- `GET /api/admin/zero-hits?days=0` returns 400.
+- `GET /api/admin/zero-hits?sort=bad` returns 400.
 
-#### B-2. AI consultation request validation / null contract
+#### B-2. AI Consultation Request Validation / Null Contract
 
-対象指摘: #9, #15, #39  
-対象ファイル: `AiConsultRequest`, `AiConsultController`, `AiPromptBuilder`
+Findings: #9, #15, #39
+Files: `AiConsultRequest`, `AiConsultController`, `AiPromptBuilder`
 
-現状:
+Current state:
 
-- `AiConsultRequest.question` は `@NotBlank` のみ。
-- `keyword`, `hitCount`, `lastSearchedAt` の optional / nullable 契約が明示されていない。
-- prompt に入る free text の長さ制限がない。
+- `AiConsultRequest.question` has only `@NotBlank`.
+- The optional / nullable contracts for `keyword`, `hitCount`, and `lastSearchedAt` are not explicit.
+- Free text included in the prompt has no length limit.
 
-最適な修正:
+Optimal remediation:
 
-- `AiConsultRequest` に明示的な制約を追加する。
+- Add explicit constraints to `AiConsultRequest`.
   - `keyword`: `@Nullable @Size(max = 200)`
   - `question`: `@NotBlank @Size(max = 1000)`
   - `hitCount`: `@Nullable @Min(0) @Max(1_000_000)`
   - `lastSearchedAt`: `@Nullable @PastOrPresent`
-- `AiPromptBuilder` 側でも trim 後の値を使い、null / blank を safe value に変換する。
-- prompt には token / API key / Authorization header を絶対に含めない方針をテストで固定する。
+- In `AiPromptBuilder`, use trimmed values and convert null / blank values to safe values.
+- Enforce through tests the policy that prompts must never include tokens / API keys / Authorization headers.
 
-検証:
+Validation:
 
-- question blank / 1001 文字で 400。
-- hitCount 負数で 400。
-- future timestamp で 400。
-- fallback / provider error の応答に secrets や exception message が露出しない。
+- A blank question or a question with 1001 characters returns 400.
+- A negative hitCount returns 400.
+- A future timestamp returns 400.
+- Fallback / provider-error responses do not expose secrets or exception messages.
 
-#### B-3. Admin login rate limiting / lockout
+#### B-3. Admin Login Rate Limiting / Lockout
 
-対象指摘: #36  
-対象ファイル: `AdminAuthService`, `AuthController`, `SecurityConfig`
+Finding: #36
+Files: `AdminAuthService`, `AuthController`, `SecurityConfig`
 
-現状:
+Current state:
 
-- `AdminAuthService.login()` は認証失敗回数を保持せず、brute force を防げない。
-- username と source IP の両面での制限がない。
+- `AdminAuthService.login()` does not retain authentication-failure counts and cannot prevent brute-force attempts.
+- No limits are applied across both username and source IP.
 
-最適な修正:
+Optimal remediation:
 
-- `LoginAttemptLimiter` を導入する。
+- Introduce `LoginAttemptLimiter`.
   - key: `normalizedUsername + sourceIp`
   - threshold: 5 failures / 10 minutes
   - lock duration: 15 minutes
-  - demo では in-memory、将来 Redis 等へ差し替え可能な interface にする。
-- `AuthController.login()` は `HttpServletRequest` から source IP を渡すか、専用 filter で `/api/auth/login` を保護する。
-- 成功時は該当 key の失敗カウンタを clear する。
-- ログには username / password の raw value を出さない。username も必要なら hash 化する。
-- 応答は常に `401 AUTHENTICATION_FAILED` または `429 RATE_LIMITED` の安全な固定文言にする。
+  - Use an in-memory implementation for the demo, behind an interface that can later be replaced by Redis or another store.
+- Have `AuthController.login()` pass the source IP from `HttpServletRequest`, or protect `/api/auth/login` with a dedicated filter.
+- Clear the failure counter for the relevant key after successful authentication.
+- Do not log raw username / password values. Hash the username as well if it must be logged.
+- Always use safe, fixed response messages with `401 AUTHENTICATION_FAILED` or `429 RATE_LIMITED`.
 
-検証:
+Validation:
 
-- 連続失敗後に 429 または lockout 用 401 が返る。
-- lockout 中は正しい password でも拒否される。
-- 成功 login 後に失敗カウンタが reset される。
-- password がログに出ない。
+- Consecutive failures result in 429 or a lockout-specific 401.
+- During lockout, even the correct password is rejected.
+- The failure counter is reset after a successful login.
+- Passwords do not appear in logs.
 
-#### B-4. Token revocation / active token cap
+#### B-4. Token Revocation / Active Token Cap
 
-対象指摘: #40  
-対象ファイル: `AdminAuthService`, `AdminAuthUseCase`, `AuthController`, `SecurityConfig`
+Finding: #40
+Files: `AdminAuthService`, `AdminAuthUseCase`, `AuthController`, `SecurityConfig`
 
-現状:
+Current state:
 
-- opaque bearer token は expiry のみで、logout / revoke がない。
-- login のたびに token が無制限に追加される。
+- Opaque bearer tokens have only an expiry; logout / revocation is not supported.
+- Every login adds another token without limit.
 
-最適な修正:
+Optimal remediation:
 
-- `POST /api/auth/logout` を追加し、現在 token を revoke する。
-- `AdminAuthUseCase` に `revokeToken(String token)` と `purgeExpiredSessions()` を追加する。
-- admin ごとの active token を最大 3 件程度に制限する。MVP なら新規 login 時に古い token を失効させる方式が最も単純。
-- `BearerTokenAuthenticationFilter` は logout endpoint でも token を認証できるようにする。
-- frontend の logout 操作は token 削除だけでなく logout API 呼び出しも行う。
+- Add `POST /api/auth/logout` to revoke the current token.
+- Add `revokeToken(String token)` and `purgeExpiredSessions()` to `AdminAuthUseCase`.
+- Limit active tokens per administrator to approximately 3. For the MVP, the simplest approach is to invalidate the oldest token on each new login.
+- Ensure `BearerTokenAuthenticationFilter` can authenticate the token for the logout endpoint.
+- Make the frontend logout action call the logout API in addition to deleting the token.
 
-検証:
+Validation:
 
-- logout 後の `/api/auth/me` は 401。
-- 4 回 login したとき最古 token が無効化される。
-- expired token は validation 時または purge で除去される。
+- `/api/auth/me` returns 401 after logout.
+- After 4 logins, the oldest token is invalidated.
+- Expired tokens are removed during validation or purge.
 
-### Phase C: zero-hit 記録の整合性修正
+### Phase C: Zero-Hit Recording Integrity Remediation
 
-#### C-1. PostgreSQL atomic upsert への変更
+#### C-1. Migrate to a PostgreSQL Atomic Upsert
 
-対象指摘: #1, #18, #29  
-対象ファイル: `ZeroHitRecordingService`, `ZeroHitSearchRepository`, `ZeroHitSearch`, migration
+Findings: #1, #18, #29
+Files: `ZeroHitRecordingService`, `ZeroHitSearchRepository`, `ZeroHitSearch`, migration
 
-現状:
+Current state:
 
-- `ZeroHitRecordingService.record()` は `findByNormalizedKeyword()` -> entity update -> save の read-modify-write。
-- concurrent request では hit count の lost update が起きうる。
-- first insert の duplicate key recovery は `saveAndFlush()` の `DataIntegrityViolationException` を catch したあと、同じ transaction 内で recovery している。PostgreSQL では transaction が abort 状態になりうるため危険。
+- `ZeroHitRecordingService.record()` performs a `findByNormalizedKeyword()` -> entity update -> save read-modify-write sequence.
+- Concurrent requests can cause lost updates to the hit count.
+- Duplicate-key recovery for the first insert catches `DataIntegrityViolationException` from `saveAndFlush()` and then attempts recovery in the same transaction. This is unsafe because PostgreSQL can leave the transaction in an aborted state.
 
-最適な修正:
+Optimal remediation:
 
-- PostgreSQL native upsert を repository 境界に追加する。
-- 推奨 SQL:
+- Add a PostgreSQL native upsert at the repository boundary.
+- Recommended SQL:
   - `INSERT INTO zero_hit_searches (...) VALUES (...)`
   - `ON CONFLICT (normalized_keyword) DO UPDATE SET`
   - `keyword = EXCLUDED.keyword`
@@ -191,675 +191,674 @@
   - `estimated_opportunity_loss = :calculatedLossForNextCount`
   - `priority = :priorityForNextCount`
   - `RETURNING *`
-- `estimated_opportunity_loss` と `priority` は次回 count に依存するため、最も堅牢なのは SQL 内で `hit_count + 1` を基準に CASE / 計算するか、`UPDATE ... RETURNING hit_count` 後に同一文または stored expression で整合させること。
-- JPA entity を返す必要がある場合は native query の returning mapping を使う。難しければ upsert 後に `findByNormalizedKeyword()` を read-only で取得する。ただし increment は upsert 文で完了させる。
-- duplicate insert retry は削除する。
+- Because `estimated_opportunity_loss` and `priority` depend on the next count, the most robust approach is to calculate them in SQL from `hit_count + 1`, using CASE / calculation, or to keep them consistent in the same statement or a stored expression after `UPDATE ... RETURNING hit_count`.
+- If a JPA entity must be returned, use native-query returning mapping. If that is difficult, perform a read-only `findByNormalizedKeyword()` after the upsert. The increment itself must be completed by the upsert statement.
+- Remove the duplicate-insert retry.
 
-代替案:
+Alternative:
 
-- `@Version` + optimistic retry でも lost update は防げるが、duplicate insert recovery の failed transaction 問題は別対応が必要。PostgreSQL を前提にできる本プロジェクトでは atomic upsert が最適。
+- `@Version` plus optimistic retry can also prevent lost updates, but the failed-transaction problem during duplicate-insert recovery still requires separate handling. Because this project can assume PostgreSQL, an atomic upsert is optimal.
 
-検証:
+Validation:
 
-- Testcontainers PostgreSQL で 20 並列 `record("Powder Finder XL")` を実行し、1 row / `hit_count=20` を確認。
-- 同一 normalized keyword の異なる display keyword でも 1 row のまま更新される。
-- first / repeat の priority と estimated opportunity loss が hit count と一致する。
+- Run 20 concurrent `record("Powder Finder XL")` calls against Testcontainers PostgreSQL and confirm 1 row / `hit_count=20`.
+- Different display keywords with the same normalized keyword update the same single row.
+- Priority and estimated opportunity loss for first / repeat records match the hit count.
 
-#### C-2. Aggregate invariant と domain policy の強化
+#### C-2. Strengthen Aggregate Invariants and Domain Policy
 
-対象指摘: #3, #4  
-対象ファイル: `ZeroHitSearch`, `OpportunityLossCalculator`, `ZeroHitPriorityDecider`, `ZeroHitRecordingService`
+Findings: #3, #4
+Files: `ZeroHitSearch`, `OpportunityLossCalculator`, `ZeroHitPriorityDecider`, `ZeroHitRecordingService`
 
-現状:
+Current state:
 
-- `ZeroHitSearch` の public all-args constructor は blank keyword、hitCount 0、timestamp 逆転、負の金額などの不正状態を作れる。
-- `updateDemandSignals()` で opportunity loss / priority を外部から任意に上書きできる。
-- `recordRepeat()` も priority / loss の整合性を外部計算に依存している。
+- The public all-arguments constructor of `ZeroHitSearch` can create invalid states such as a blank keyword, hitCount 0, reversed timestamps, or a negative monetary amount.
+- `updateDemandSignals()` allows opportunity loss / priority to be overwritten arbitrarily from outside the aggregate.
+- `recordRepeat()` also depends on external calculations to maintain priority / loss consistency.
 
-最適な修正:
+Optimal remediation:
 
-- `ZeroHitSearch.firstHit(...)` と `recordRepeat(...)` を唯一の business mutation にする。
-- all-args constructor は package-private にするか、test fixture 用 factory に寄せる。
-- invariant:
-  - keyword / normalizedKeyword は non-blank
+- Make `ZeroHitSearch.firstHit(...)` and `recordRepeat(...)` the only business mutations.
+- Make the all-arguments constructor package-private or move test construction to a test-fixture factory.
+- Invariants:
+  - keyword / normalizedKeyword are non-blank
   - hitCount >= 1
-  - estimatedOpportunityLoss は null でない、または non-negative
+  - estimatedOpportunityLoss is non-null or non-negative
   - firstSearchedAt <= lastSearchedAt
-  - priority は hitCount の rule と一致
-- `ZeroHitDemandPolicy` のような pure domain service を作り、hitCount / averagePrice から `Priority` と `Money` をまとめて返す。
-- `updateDemandSignals()` は削除または private/package-private にする。
+  - priority matches the hitCount rule
+- Create a pure domain service such as `ZeroHitDemandPolicy` that returns `Priority` and `Money` together from hitCount / averagePrice.
+- Remove `updateDemandSignals()` or make it private/package-private.
 
-検証:
+Validation:
 
-- invalid constructor / factory 入力で例外。
-- repeat 後に hitCount、priority、lastSearchedAt、loss が一貫する。
-- mutation method が arbitrary priority を受け付けない。
+- Invalid constructor / factory input throws an exception.
+- After a repeat, hitCount, priority, lastSearchedAt, and loss remain consistent.
+- Mutation methods do not accept arbitrary priority values.
 
-#### C-3. User-controlled keyword logging の除去
+#### C-3. Remove User-Controlled Keyword Logging
 
-対象指摘: #41  
-対象ファイル: `ZeroHitRecordingService`, logging config
+Finding: #41
+Files: `ZeroHitRecordingService`, logging config
 
-現状:
+Current state:
 
-- `zero_hit_recorded normalizedKeyword={...}` で user input 由来の normalized keyword が raw log に残る。
+- `zero_hit_recorded normalizedKeyword={...}` writes a normalized keyword derived from user input to raw logs.
 
-最適な修正:
+Optimal remediation:
 
-- raw keyword / normalizedKeyword はログに出さない。
-- 代わりに次を出す。
+- Do not log raw keyword / normalizedKeyword values.
+- Log the following instead.
   - event name
-  - stable hash prefix: SHA-256 normalized keyword の先頭 12 文字
+  - stable hash prefix: first 12 characters of the SHA-256 normalized keyword
   - keyword length
   - hitCount
   - priority
-- hash salt を使う場合は env 由来。ただし demo では salt 未設定でも raw value を出さないことを優先する。
+- If a hash salt is used, source it from the environment. For the demo, prioritize never emitting the raw value even when no salt is configured.
 
-検証:
+Validation:
 
-- ログ出力テストで検索語そのものが含まれない。
-- hash / length / priority は含まれる。
+- Logging tests confirm that the search term itself is not included.
+- The hash / length / priority are included.
 
-### Phase D: GET search の副作用分離
+### Phase D: Separate GET Search Side Effects
 
-対象指摘: #6, #37  
-対象ファイル: `ProductController`, `ProductSearchService`, `ZeroHitRecordingService`, frontend API client, `backend-design.md`
+Findings: #6, #37
+Files: `ProductController`, `ProductSearchService`, `ZeroHitRecordingService`, frontend API client, `backend-design.md`
 
-現状:
+Current state:
 
-- `backend-design.md` と要件定義は「検索結果が 0 件の場合、バックエンドに Zero Hit として記録する」としている。
-- 実装は `GET /api/products/search` の service 内で zero-hit を記録している。
-- レビューは HTTP safe method と analytics pollution の観点で High と判定している。
+- `backend-design.md` and the requirements state that when a search returns zero results, the backend records it as a Zero Hit.
+- The implementation records the zero hit inside the service for `GET /api/products/search`.
+- The review rates this as High because of HTTP safe-method semantics and analytics-pollution risk.
 
-最適な修正:
+Optimal remediation:
 
-- GET は検索結果の取得だけにする。
-- `ProductSearchResponse.zeroHitRecorded` は `zeroHitCandidate` または `zeroHitDetected` に改名するか、互換性のため残しつつ false にする期間を設ける。
-- 新規 command endpoint を追加する。
+- Make GET retrieve search results only.
+- Rename `ProductSearchResponse.zeroHitRecorded` to `zeroHitCandidate` or `zeroHitDetected`, or retain it temporarily with a false value for compatibility.
+- Add a new command endpoint.
   - `POST /api/zero-hit-searches`
   - request: `{ "keyword": "..." }`
   - response: `{ "recorded": true, "keywordHash": "...", "hitCount": ... }`
-- frontend は検索 submit の結果が 0 件かつ keyword non-blank の場合だけ POST する。
-- API abuse を避けるため POST endpoint に validation、rate limit、CORS、必要に応じて CSRF 相当の防御を入れる。
-- `backend-design.md` と `front-design.md` の API contract を同時更新する。
+- The frontend sends the POST only when a submitted search returns zero results and the keyword is non-blank.
+- To prevent API abuse, apply validation, rate limiting, CORS, and CSRF-equivalent protection where necessary to the POST endpoint.
+- Update the API contracts in `backend-design.md` and `front-design.md` at the same time.
 
-互換案:
+Compatibility option:
 
-- 既存 frontend を短期的に壊さないため、移行期間だけ GET 側記録を feature flag で残すことは可能。ただし OSS 公開品質では最終的に read-only GET へ収束させる。
+- To avoid breaking the existing frontend in the short term, GET-side recording may remain behind a feature flag during the migration period. For OSS publication quality, the final state must converge on a read-only GET.
 
-検証:
+Validation:
 
-- GET search を複数回叩いても zero_hit_searches が増えない。
-- 0 件検索後の POST で 1 row 記録される。
-- 空 keyword / 長すぎる keyword は POST 400。
-- frontend の一般検索 journey で zero-hit が漏れずに記録される。
+- Repeated GET searches do not increase `zero_hit_searches`.
+- A POST after a zero-result search records 1 row.
+- An empty keyword / excessively long keyword returns POST 400.
+- The standard frontend search journey records zero hits without omissions.
 
-### Phase E: AI provider の resilience と transaction 分離
+### Phase E: AI Provider Resilience and Transaction Separation
 
-#### E-1. Transaction scope 分離
+#### E-1. Separate Transaction Scope
 
-対象指摘: #20  
-対象ファイル: `AiConsultationService`, `ProductRepository`
+Finding: #20
+Files: `AiConsultationService`, `ProductRepository`
 
-現状:
+Current state:
 
-- `AiConsultationService.consult()` 全体が `@Transactional(readOnly = true)`。
-- product context 取得後も transaction が開いたまま live AI provider call が行われる。
+- The entire `AiConsultationService.consult()` method is annotated with `@Transactional(readOnly = true)`.
+- After product context is retrieved, the transaction remains open during the live AI provider call.
 
-最適な修正:
+Optimal remediation:
 
-- `AiConsultationContextService` などを作り、DB context 取得だけを `@Transactional(readOnly = true)` にする。
-- `AiConsultationService.consult()` から `@Transactional` を外し、AI call は transaction outside で実行する。
-- context は immutable record にして、provider 境界へ entity を渡さない。
+- Create `AiConsultationContextService` or equivalent, and apply `@Transactional(readOnly = true)` only to DB context retrieval.
+- Remove `@Transactional` from `AiConsultationService.consult()` and execute the AI call outside a transaction.
+- Represent context as an immutable record and do not pass entities across the provider boundary.
 
-検証:
+Validation:
 
-- `consult()` が transaction active で provider を呼ばないことを unit / integration で確認。
-- provider が遅延 / 失敗しても DB connection が保持されない。
+- Unit / integration tests confirm that `consult()` does not invoke the provider while a transaction is active.
+- A slow or failed provider does not retain a DB connection.
 
-#### E-2. Retry / circuit breaker / timeout
+#### E-2. Retry / Circuit Breaker / Timeout
 
-対象指摘: #64, #76, #77  
-対象ファイル: `SpringAiProviderClient`, `SpringAiConfig`, `AiProperties`, `application.yml`, `pom.xml`
+Findings: #64, #76, #77
+Files: `SpringAiProviderClient`, `SpringAiConfig`, `AiProperties`, `application.yml`, `pom.xml`
 
-現状:
+Current state:
 
-- `SpringAiProviderClient.generate()` は provider call を直接行い、retry / circuit breaker がない。
-- OpenAI client に明示 timeout がない。
-- branch coverage が不足している。
+- `SpringAiProviderClient.generate()` invokes the provider directly and has no retry / circuit breaker.
+- The OpenAI client has no explicit timeout.
+- Branch coverage is insufficient.
 
-最適な修正:
+Optimal remediation:
 
-- Resilience4j Spring Boot 3 を追加する。
+- Add Resilience4j Spring Boot 3.
   - `resilience4j-spring-boot3`
   - `resilience4j-retry`
   - `resilience4j-circuitbreaker`
-- `SpringAiProviderClient.generate()` の live call 境界に `@Retry(name = "aiProvider")` と `@CircuitBreaker(name = "aiProvider")` を付ける。
-- retry は低回数にする。
-  - max attempts: 2 または 3
-  - wait duration: 250ms から exponential backoff
-  - retry 対象: transient network / timeout / 5xx 相当のみ
-- `app.ai.response-timeout` を追加し、Spring AI / underlying HTTP client に適用する。
-- timeout 適用が Spring AI builder で困難な場合は、provider adapter を `RestClient` / `WebClient` 経由の OpenAI-compatible endpoint に切り出す。ただし Spring AI 優先方針を保ち、最小差分にする。
-- provider failure は `AiProviderException` に包み、fallback response は継続する。
+- Add `@Retry(name = "aiProvider")` and `@CircuitBreaker(name = "aiProvider")` at the live-call boundary of `SpringAiProviderClient.generate()`.
+- Use a low retry count.
+  - max attempts: 2 or 3
+  - wait duration: exponential backoff starting at 250ms
+  - retry targets: transient network / timeout / 5xx-equivalent failures only
+- Add `app.ai.response-timeout` and apply it to Spring AI / the underlying HTTP client.
+- If applying the timeout through the Spring AI builder is difficult, extract the provider adapter to an OpenAI-compatible endpoint through `RestClient` / `WebClient`. Retain the preference for Spring AI and minimize the diff.
+- Wrap provider failures in `AiProviderException` and continue returning the fallback response.
 
-検証:
+Validation:
 
-- API key 未設定 -> `Optional.empty()`。
-- `ChatClient` 未登録 -> `Optional.empty()`。
-- blank answer -> `Optional.empty()`。
-- provider success -> answer。
-- provider RuntimeException -> `AiProviderException`。
-- retry 対象例外で retry される。
-- circuit open 時は fallback / error response になる。
-- timeout 設定が property binding される。
+- API key not configured -> `Optional.empty()`.
+- `ChatClient` not registered -> `Optional.empty()`.
+- Blank answer -> `Optional.empty()`.
+- Provider success -> answer.
+- Provider RuntimeException -> `AiProviderException`.
+- Retry-target exceptions are retried.
+- An open circuit results in a fallback / error response.
+- The timeout configuration is bound through properties.
 
-### Phase F: Error / logging / observability / security headers
+### Phase F: Errors / Logging / Observability / Security Headers
 
-#### F-1. ProblemDetail migration
+#### F-1. ProblemDetail Migration
 
-対象指摘: #11, #24  
-対象ファイル: `GlobalExceptionHandler`, `ApiErrorWriter`, frontend error normalization tests
+Findings: #11, #24
+Files: `GlobalExceptionHandler`, `ApiErrorWriter`, frontend error normalization tests
 
-現状:
+Current state:
 
-- `GlobalExceptionHandler` は custom `ApiErrorResponse` を返す。
-- security handler は `ApiErrorWriter` で同じ custom payload を書く。
+- `GlobalExceptionHandler` returns a custom `ApiErrorResponse`.
+- Security handlers write the same custom payload through `ApiErrorWriter`.
 
-最適な修正:
+Optimal remediation:
 
-- Spring `ProblemDetail` に移行する。
-- stable extension properties:
+- Migrate to Spring `ProblemDetail`.
+- Stable extension properties:
   - `code`
   - `path`
   - `errors`
   - `correlationId`
-- response content type は `application/problem+json` を基本にする。
-- frontend は `message`, `detail`, `title` のどれでも表示できるようにしておく。
-- 移行により `ApiErrorResponse` は削除または deprecated internal adapter にする。
+- Use `application/problem+json` as the default response content type.
+- Ensure the frontend can display any of `message`, `detail`, or `title`.
+- As part of the migration, remove `ApiErrorResponse` or retain it only as a deprecated internal adapter.
 
-検証:
+Validation:
 
-- validation error に `code=VALIDATION_ERROR` と `errors` がある。
-- auth failure に `code=AUTHENTICATION_REQUIRED` / `AUTHENTICATION_FAILED` がある。
-- unexpected error は stack trace / SQL / token を response に出さない。
+- Validation errors include `code=VALIDATION_ERROR` and `errors`.
+- Authentication failures include `code=AUTHENTICATION_REQUIRED` / `AUTHENTICATION_FAILED`.
+- Unexpected errors do not expose stack traces / SQL / tokens in the response.
 
-#### F-2. Throwable logging と AI fallback logging
+#### F-2. Throwable Logging and AI Fallback Logging
 
-対象指摘: #22, #23  
-対象ファイル: `GlobalExceptionHandler`, `AiConsultationService`
+Findings: #22, #23
+Files: `GlobalExceptionHandler`, `AiConsultationService`
 
-現状:
+Current state:
 
-- catch-all 500 log は exception class 名だけで stack trace が出ない。
-- AI provider fallback の warn log は exception details を落としている。
+- The catch-all 500 log records only the exception class name and omits the stack trace.
+- The AI provider fallback warning log drops exception details.
 
-最適な修正:
+Optimal remediation:
 
 - `LOGGER.error("Unexpected API error at {}", request.getRequestURI(), exception);`
 - `LOGGER.warn("ai_consultation providerStatus={}", response.providerStatus(), exception);`
-- prompt、API key、Authorization、password、raw keyword はログに含めない。
+- Do not include prompts, API keys, Authorization values, passwords, or raw keywords in logs.
 
-検証:
+Validation:
 
-- log capture で Throwable が渡されることを確認。
-- response には exception message が出ない。
+- Log capture confirms that the Throwable is passed to the logger.
+- Exception messages do not appear in responses.
 
 #### F-3. X-Correlation-Id / MDC
 
-対象指摘: #21  
-対象ファイル: `RequestLoggingFilter`, `SecurityConfig`, logback
+Finding: #21
+Files: `RequestLoggingFilter`, `SecurityConfig`, logback
 
-現状:
+Current state:
 
-- request logging は path / status / duration のみ。
-- `X-Correlation-Id` を読まず、生成せず、response header にも返さない。
-- MDC cleanup がない。
+- Request logging includes only path / status / duration.
+- `X-Correlation-Id` is not read, generated, or returned in the response header.
+- MDC cleanup is missing.
 
-最適な修正:
+Optimal remediation:
 
-- `RequestLoggingFilter` で以下を実装する。
-  - request header `X-Correlation-Id` が valid なら使用
-  - なければ UUID 生成
+- Implement the following in `RequestLoggingFilter`.
+  - Use request header `X-Correlation-Id` when valid
+  - Generate a UUID when the header is absent
   - `MDC.put("correlationId", id)`
-  - response header に `X-Correlation-Id`
-  - finally で `MDC.remove("correlationId")`
-- CORS exposed headers に `X-Correlation-Id` を追加する。
+  - Return `X-Correlation-Id` in the response header
+  - Call `MDC.remove("correlationId")` in finally
+- Add `X-Correlation-Id` to the CORS exposed headers.
 
-検証:
+Validation:
 
-- header 指定あり -> 同じ ID が response。
-- header 指定なし -> UUID が response。
-- 連続 request で MDC が漏れない。
+- Header provided -> the same ID is returned in the response.
+- Header absent -> a UUID is returned in the response.
+- MDC state does not leak across consecutive requests.
 
-#### F-4. Structured JSON logging
+#### F-4. Structured JSON Logging
 
-対象指摘: #25, #44  
-対象ファイル: `pom.xml`, `logback-spring.xml`, `application-dev.yml`, `application-prod.yml`
+Findings: #25, #44
+Files: `pom.xml`, `logback-spring.xml`, `application-dev.yml`, `application-prod.yml`
 
-現状:
+Current state:
 
-- `logstash-logback-encoder` がない。
-- `logback-spring.xml` がない。
+- `logstash-logback-encoder` is not present.
+- `logback-spring.xml` is not present.
 
-最適な修正:
+Optimal remediation:
 
-- `net.logstash.logback:logstash-logback-encoder` を追加する。
-- `logback-spring.xml` を追加する。
+- Add `net.logstash.logback:logstash-logback-encoder`.
+- Add `logback-spring.xml`.
   - dev: readable pattern log
   - prod/docker: JSON log
   - fields: application name, profile, correlationId, trace/span if present, method/path/status/duration
-- password / token / raw keyword を field に入れない。
+- Do not include passwords / tokens / raw keywords in fields.
 
-検証:
+Validation:
 
-- docker profile で JSON log が出る。
-- correlationId が log に含まれる。
+- The Docker profile emits JSON logs.
+- Logs include correlationId.
 
-#### F-5. Security headers
+#### F-5. Security Headers
 
-対象指摘: #32, #38  
-対象ファイル: `SecurityConfig`
+Findings: #32, #38
+File: `SecurityConfig`
 
-現状:
+Current state:
 
-- SecurityFilterChain に明示的な `.headers(...)` がない。
+- SecurityFilterChain has no explicit `.headers(...)` configuration.
 
-最適な修正:
+Optimal remediation:
 
-- API と frontend が別 origin の構成を前提に、Spring Security headers を明示設定する。
+- Explicitly configure Spring Security headers, assuming the API and frontend use different origins.
   - `frameOptions().deny()`
   - `contentTypeOptions`
   - `referrerPolicy(STRICT_ORIGIN_WHEN_CROSS_ORIGIN)`
   - `permissionsPolicy("geolocation=(), microphone=(), camera=()")`
-  - CSP: JSON API として最小化。必要なら frontend 側 CSP と分担する。
-  - HSTS: TLS 終端が確定した profile のみ有効化。
+  - CSP: Minimize for a JSON API. Coordinate with the frontend CSP if necessary.
+  - HSTS: Enable only in profiles where TLS termination is established.
 
-検証:
+Validation:
 
-- `/api/products` と `/api/admin/zero-hits` の response に期待 header がある。
-- CORS と Authorization header が壊れない。
+- Responses from `/api/products` and `/api/admin/zero-hits` include the expected headers.
+- CORS and the Authorization header continue to work.
 
-### Phase G: Configuration / secret / profile / runtime
+### Phase G: Configuration / Secrets / Profiles / Runtime
 
-対象指摘: #19, #26, #31, #33, #34, #35  
-対象ファイル: `application.yml`, `application-dev.yml`, `application-docker.yml`, `application-prod.yml`, `.env.example`, `docker-compose.yml`
+Findings: #19, #26, #31, #33, #34, #35
+Files: `application.yml`, `application-dev.yml`, `application-docker.yml`, `application-prod.yml`, `.env.example`, `docker-compose.yml`
 
-現状:
+Current state:
 
-- default `application.yml` に `SPRING_DATASOURCE_URL` の localhost fallback がある。
-- `application-docker.yml` に `skishop` password fallback がある。
-- dev / prod profile が分離されていない。
-- virtual threads が有効化されていない。
-- TLS / reverse proxy termination の設定または文書化がない。
+- The default `application.yml` contains a localhost fallback for `SPRING_DATASOURCE_URL`.
+- `application-docker.yml` contains a `skishop` password fallback.
+- Dev / prod profiles are not separated.
+- Virtual threads are not enabled.
+- TLS / reverse-proxy termination is neither configured nor documented.
 
-最適な修正:
+Optimal remediation:
 
-- `application.yml` は共通設定のみとし、secret / datasource は env 必須にする。
+- Keep only shared configuration in `application.yml`, and require environment variables for secrets / datasource settings.
   - `url: ${SPRING_DATASOURCE_URL}`
   - `username: ${SPRING_DATASOURCE_USERNAME}`
   - `password: ${SPRING_DATASOURCE_PASSWORD}`
-- `application-dev.yml` に localhost fallback を移す。
-- `application-docker.yml` は compose から env を渡す。profile 内に literal password fallback を置かない。
-- `application-prod.yml` を追加する。
+- Move the localhost fallback to `application-dev.yml`.
+- Pass environment variables from Compose to `application-docker.yml`. Do not place a literal password fallback in the profile.
+- Add `application-prod.yml`.
   - root log level WARN
   - SQL display disabled
   - stacktrace disabled
   - env required
   - `server.forward-headers-strategy=framework`
-  - HSTS は TLS termination 方針に合わせる。
-- `.env.example` に非秘密のサンプル名のみを書く。実 password は入れないか、local demo 用であることを明記する。
-- Java 21 / Spring Boot の virtual threads を有効化する。
+  - Align HSTS with the TLS termination policy.
+- Put only non-secret sample names in `.env.example`. Do not include a real password, or clearly mark any value as local-demo-only.
+- Enable Java 21 / Spring Boot virtual threads.
   - `spring.threads.virtual.enabled: true`
-  - request logging / security filter / MDC の動作確認を行う。
+  - Verify request logging / security filters / MDC behavior.
 
-検証:
+Validation:
 
-- prod profile で DB env 未設定なら fail fast。
-- docker compose は `.env` または compose env で起動する。
-- `application-docker.yml` に literal password fallback がない。
-- virtual threads 有効状態で backend test / smoke test が通る。
+- The prod profile fails fast when DB environment variables are missing.
+- Docker Compose starts with `.env` or Compose environment variables.
+- `application-docker.yml` contains no literal password fallback.
+- Backend tests / smoke tests pass with virtual threads enabled.
 
-### Phase H: Data access / API performance / null safety
+### Phase H: Data Access / API Performance / Null Safety
 
-#### H-1. Pagination と duplicate count の修正
+#### H-1. Correct Pagination and Duplicate Counts
 
-対象指摘: #68, #69, #70  
-対象ファイル: `ProductRequestOptions`, `ProductQueryService`, `ProductSearchService`, DTO, frontend
+Findings: #68, #69, #70
+Files: `ProductRequestOptions`, `ProductQueryService`, `ProductSearchService`, DTO, frontend
 
-現状:
+Current state:
 
-- page は常に 0 固定で、`limit` のみ。
-- `findAll(spec, pageable)` が count を発行しうるのに、さらに `count(spec)` を呼ぶ。
-- search でも count を重複実行している。
+- The page is always fixed at 0, with only `limit` available.
+- `findAll(spec, pageable)` can issue a count query, but the code additionally calls `count(spec)`.
+- Search also executes duplicate count queries.
 
-最適な修正:
+Optimal remediation:
 
-- API を `page` / `size` に拡張する。既存 `limit` は `size` alias として移行期間だけ許容する。
-- `Page<Product> page = repository.findAll(spec, pageable)` を使い、`page.getTotalElements()` を response に使う。
-- `ProductListResponse` / `ProductSearchResponse` に `page`, `size`, `totalPages`, `totalCount` を含める。
-- frontend の pagination UI がまだない場合は、まず API 側は page=0 を default にして既存 UX を維持する。
+- Extend the API with `page` / `size`. Permit the existing `limit` as an alias for `size` only during the migration period.
+- Use `Page<Product> page = repository.findAll(spec, pageable)` and use `page.getTotalElements()` in the response.
+- Include `page`, `size`, `totalPages`, and `totalCount` in `ProductListResponse` / `ProductSearchResponse`.
+- If the frontend does not yet have pagination UI, default the API to page=0 initially to preserve the existing UX.
 
-検証:
+Validation:
 
-- `page=1&size=20` で 2 ページ目が取得できる。
-- count query が二重に呼ばれないことを repository mock / SQL log で確認。
-- 既存 frontend の初期表示が壊れない。
+- `page=1&size=20` returns the second page.
+- Repository mocks / SQL logs confirm that the count query is not called twice.
+- The initial display in the existing frontend remains functional.
 
-#### H-2. DTO projection
+#### H-2. DTO Projection
 
-対象指摘: #71  
-対象ファイル: `ProductRepository`, `ProductDto`, `ProductMapper`, query service
+Finding: #71
+Files: `ProductRepository`, `ProductDto`, `ProductMapper`, query service
 
-現状:
+Current state:
 
-- public list/search は managed `Product` entity を materialize し、service で DTO mapping している。
+- Public list/search operations materialize managed `Product` entities and map them to DTOs in the service.
 
-最適な修正:
+Optimal remediation:
 
-- read-only public API は DTO projection / interface projection を使う。
-- `ProductReadProjection` を定義し、repository query で必要列だけ取得する。
-- `ProductMapper` は projection -> DTO に対応する。
-- admin / domain mutation で entity が必要な箇所とは分ける。
+- Use DTO projections / interface projections for read-only public APIs.
+- Define `ProductReadProjection` and retrieve only required columns in repository queries.
+- Update `ProductMapper` to support projection -> DTO mapping.
+- Keep this separate from admin / domain mutation paths that require entities.
 
-検証:
+Validation:
 
-- list/search response が既存 DTO と一致する。
-- SQL が必要列だけを select する。
+- List/search responses match the existing DTOs.
+- SQL selects only required columns.
 
-#### H-3. Null safety
+#### H-3. Null Safety
 
-対象指摘: #16, #17  
-対象ファイル: `ProductDto`, `Product`, `ProductRepository`
+Findings: #16, #17
+Files: `ProductDto`, `Product`, `ProductRepository`
 
-現状:
+Current state:
 
-- `imageUrl` は nullable だが DTO / getter / constructor parameter に nullable 契約がない。
-- repository query は `category` null を受け入れる設計だが `@Nullable` がない。
+- `imageUrl` is nullable, but DTO / getter / constructor parameters do not declare the nullable contract.
+- A repository query is designed to accept null for `category`, but does not have `@Nullable`.
 
-最適な修正:
+Optimal remediation:
 
-- `org.springframework.lang.Nullable` を付与する。
+- Add `org.springframework.lang.Nullable` to the following.
   - `Product.imageUrl`
   - `Product.getImageUrl()`
   - `ProductDto.imageUrl`
   - repository `@Param("category")`
-- 代替として image URL を non-null fallback にすることも可能だが、DB schema は nullable のため nullable 明示が最小で正しい。
+- A non-null fallback image URL is another option, but because the DB schema permits null, explicitly declaring nullability is the smallest correct change.
 
-検証:
+Validation:
 
-- null image URL の product が response で安全に扱われる。
-- repository method の static analysis / IDE warning が消える。
+- A product with a null image URL is handled safely in the response.
+- Static-analysis / IDE warnings for the repository method are eliminated.
 
-#### H-4. Entity column / audit timestamp
+#### H-4. Entity Columns / Audit Timestamps
 
-対象指摘: #28, #30  
-対象ファイル: `Product`, `ZeroHitSearch`
+Findings: #28, #30
+Files: `Product`, `ZeroHitSearch`
 
-現状:
+Current state:
 
-- 一部 `@Column` が `name` を省略している。
-- `Product` は `@PrePersist` / `@PreUpdate` で audit timestamp を手動更新している。
+- Some `@Column` annotations omit `name`.
+- `Product` manually updates audit timestamps with `@PrePersist` / `@PreUpdate`.
 
-最適な修正:
+Optimal remediation:
 
-- 全 persisted field に explicit `@Column(name = "...")` を付ける。
-- `Product.createdAt` に `@CreationTimestamp`、`updatedAt` に `@UpdateTimestamp` を付ける。
-- `ZeroHitSearch` の time は business event time なので、automatic audit ではなく domain method で制御してよい。ただし id / keyword / priority の column name は明示する。
+- Add an explicit `@Column(name = "...")` to every persisted field.
+- Add `@CreationTimestamp` to `Product.createdAt` and `@UpdateTimestamp` to `updatedAt`.
+- Times in `ZeroHitSearch` are business-event times and may remain controlled by domain methods rather than automatic auditing. However, explicitly name the id / keyword / priority columns.
 
-検証:
+Validation:
 
-- Hibernate `ddl-auto=validate` が通る。
-- Product persist / update 時に timestamp がセットされる。
+- Hibernate `ddl-auto=validate` passes.
+- Timestamps are set when Product is persisted / updated.
 
-#### H-5. Primary key type
+#### H-5. Primary Key Type
 
-対象指摘: #27  
-対象ファイル: `Product`, `ZeroHitSearch`, migrations, DTO
+Finding: #27
+Files: `Product`, `ZeroHitSearch`, migrations, DTO
 
-現状:
+Current state:
 
-- entity primary key は `UUID`。
-- review standard は String UUID を要求しているが、`backend-design.md` と DB migration は PostgreSQL UUID を前提にしている。
+- Entity primary keys use `UUID`.
+- The review standard requires String UUIDs, but `backend-design.md` and the DB migrations assume PostgreSQL UUIDs.
 
-推奨対応:
+Recommended response:
 
-- ただちに String 化しない。
-- `backend-design.md` の `UUID` 方針を project standard として明示し、レビュー標準の例外として記録する。
-- もし String UUID が必須と決定された場合のみ、別 migration で DB type / DTO / repository ID type をまとめて変更する。
+- Do not convert to String immediately.
+- Explicitly document the `UUID` policy in `backend-design.md` as a project standard and record it as an exception to the review standard.
+- Only if String UUIDs are determined to be mandatory, change the DB type / DTO / repository ID type together in a separate migration.
 
-検証:
+Validation:
 
-- UUID 方針を docs に明記し、review exception として追跡する。
+- Document the UUID policy and track it as a review exception.
 
-#### H-6. Package convention / DTO split
+#### H-6. Package Convention / DTO Split
 
-対象指摘: #2  
-対象ファイル: backend package 全体、設計書
+Finding: #2
+Files: entire backend package, design documents
 
-現状:
+Current state:
 
-- entity は `com.skishop.entity`、DTO は `com.skishop.dto` flat package。
-- architecture review の想定は `model` と `dto.request` / `dto.response`。
+- Entities are in `com.skishop.entity`, and DTOs are in a flat `com.skishop.dto` package.
+- The architecture review expects `model` and `dto.request` / `dto.response`.
 
-最適な修正:
+Optimal remediation:
 
-- correctness 修正後に package 整理を行う。
-- JPA entity は `com.skishop.model` へ移す。
-- request DTO:
+- Reorganize packages after correctness fixes are complete.
+- Move JPA entities to `com.skishop.model`.
+- Request DTOs:
   - `LoginRequest`
   - `AiConsultRequest`
   - zero-hit record request
-- response DTO:
+- Response DTOs:
   - `ProductDto`
   - `ProductListResponse`
   - `ProductSearchResponse`
   - `ZeroHitListResponse`
   - auth / AI response
-- 移行後、controller / service / tests の import を一括更新する。
+- After migration, update controller / service / test imports in one operation.
 
-検証:
+Validation:
 
-- package 移行後に `./mvnw test`。
-- frontend DTO contract に影響がないことを API tests で確認。
+- Run `./mvnw test` after package migration.
+- API tests confirm that frontend DTO contracts are unaffected.
 
-#### H-7. ZeroHitRecordingService interface
+#### H-7. ZeroHitRecordingService Interface
 
-対象指摘: #14  
-対象ファイル: `ZeroHitRecordingService`, `ProductSearchService`
+Finding: #14
+Files: `ZeroHitRecordingService`, `ProductSearchService`
 
-現状:
+Current state:
 
-- `ProductSearchService` は concrete `ZeroHitRecordingService` に依存している。
+- `ProductSearchService` depends on the concrete `ZeroHitRecordingService`.
 
-最適な修正:
+Optimal remediation:
 
-- `ZeroHitRecordingUseCase` または `ZeroHitRecorder` interface を追加する。
-- `ZeroHitRecordingService implements ZeroHitRecordingUseCase`。
-- consumer は interface に依存する。
-- GET 副作用分離後は、新しい POST command controller がこの interface を使う。
+- Add a `ZeroHitRecordingUseCase` or `ZeroHitRecorder` interface.
+- `ZeroHitRecordingService implements ZeroHitRecordingUseCase`.
+- Consumers depend on the interface.
+- After separating GET side effects, the new POST command controller uses this interface.
 
-検証:
+Validation:
 
-- DI が interface 経由で解決される。
-- ProductSearchService は zero-hit recorder に依存しなくなるか、移行期間のみ optional にする。
+- DI resolves through the interface.
+- `ProductSearchService` no longer depends on the zero-hit recorder, or depends on it only optionally during the migration period.
 
-#### H-8. AuthController principal binding
+#### H-8. AuthController Principal Binding
 
-対象指摘: #10  
-対象ファイル: `AuthController`
+Finding: #10
+File: `AuthController`
 
-現状:
+Current state:
 
-- `/api/auth/me` は `Authentication` を受け取り、principal を manual cast している。
+- `/api/auth/me` receives `Authentication` and manually casts the principal.
 
-最適な修正:
+Optimal remediation:
 
-- `me(@AuthenticationPrincipal AdminUserDto user)` に変更する。
-- null は security chain 上は到達しないが、防御的に 401 を返せるようにする。
+- Change it to `me(@AuthenticationPrincipal AdminUserDto user)`.
+- Null should be unreachable through the security chain, but defensively permit a 401 response.
 
-検証:
+Validation:
 
-- valid token で me response。
-- invalid token で 401。
-- manual cast が消える。
+- A valid token returns the me response.
+- An invalid token returns 401.
+- The manual cast is removed.
 
-#### H-9. H2 dependency scope
+#### H-9. H2 Dependency Scope
 
-対象指摘: #43  
-対象ファイル: `pom.xml`
+Finding: #43
+File: `pom.xml`
 
-現状:
+Current state:
 
-- H2 が runtime scope。
-- 実行 runtime は PostgreSQL であり、H2 は test resources 用。
+- H2 has runtime scope.
+- The application runtime uses PostgreSQL, while H2 is used by test resources.
 
-最適な修正:
+Optimal remediation:
 
-- H2 scope を `test` に変更する。
-- PostgreSQL Testcontainers を追加する場合、H2 は軽量 unit / slice test、PostgreSQL は concurrency / migration / native upsert test 用に役割分担する。
+- Change the H2 scope to `test`.
+- If PostgreSQL Testcontainers is added, use H2 for lightweight unit / slice tests and PostgreSQL for concurrency / migration / native-upsert tests.
 
-検証:
+Validation:
 
-- runtime dependency tree に H2 が含まれない。
-- test は継続成功。
+- The runtime dependency tree does not include H2.
+- Tests continue to pass.
 
-### Phase I: Domain value objects
+### Phase I: Domain Value Objects
 
-対象指摘: #5  
-対象ファイル: `Product`, `ZeroHitSearch`, domain package
+Finding: #5
+Files: `Product`, `ZeroHitSearch`, domain package
 
-現状:
+Current state:
 
-- price / estimatedOpportunityLoss は raw `BigDecimal`。
-- normalized keyword は raw `String`。
+- price / estimatedOpportunityLoss use raw `BigDecimal` values.
+- normalized keyword uses a raw `String`.
 
-最適な修正:
+Optimal remediation:
 
-- `Money` value object を導入する。
+- Introduce a `Money` value object.
   - non-null
   - scale 2
   - non-negative
-  - currency は MVP では JPY 固定
-- `NormalizedKeyword` value object を導入する。
-  - normalized string は non-blank
+  - currency fixed to JPY for the MVP
+- Introduce a `NormalizedKeyword` value object.
+  - normalized string is non-blank
   - max length
-  - lowercase / collapsed whitespace は `KeywordNormalizer` と整合
-- JPA では `@Embeddable` または `AttributeConverter` を使う。
-- 大きな schema 変更を避けるため、DB column は現状維持し、Java model 内の型安全性を上げる。
+  - lowercase / collapsed whitespace remains consistent with `KeywordNormalizer`
+- Use `@Embeddable` or `AttributeConverter` with JPA.
+- Keep the existing DB columns to avoid a large schema change, while improving type safety in the Java model.
 
-検証:
+Validation:
 
-- invalid money / keyword の生成が失敗する。
-- JPA persist / read で converter が通る。
-- API response は従来どおり number / string を返す。
+- Creating invalid money / keyword values fails.
+- The converter works for JPA persistence / reads.
+- API responses continue to return number / string values as before.
 
-### Phase J: Test / dependency / release hygiene
+### Phase J: Test / Dependency / Release Hygiene
 
-#### J-1. DI-managed service direct instantiation の解消
+#### J-1. Eliminate Direct Instantiation of DI-Managed Services
 
-対象指摘: #12, #13  
-対象ファイル: `AiConsultationServiceTests`, `AdminAuthServiceTests`
+Findings: #12, #13
+Files: `AiConsultationServiceTests`, `AdminAuthServiceTests`
 
-現状:
+Current state:
 
-- tests が `new AiConsultationService(...)` と `new AdminAuthService(...)` を直接呼ぶ。
-- AGENTS の禁止事項に抵触する扱いになっている。
+- Tests directly call `new AiConsultationService(...)` and `new AdminAuthService(...)`.
+- This is treated as violating the AGENTS prohibition.
 
-最適な修正:
+Optimal remediation:
 
-- Spring-managed service のテストは `@SpringBootTest` または focused Spring context で inject する。
-- pure logic を unit test したい箇所は、DI-managed service から非 Spring の collaborator に抽出する。
+- Test Spring-managed services by injecting them through `@SpringBootTest` or a focused Spring context.
+- To unit-test pure logic, extract non-Spring collaborators from DI-managed services.
   - `AdminTokenManager`
-  - `AiConsultationOrchestrator` など
-- Service 自体を new するテストは削除する。
+  - `AiConsultationOrchestrator`, etc.
+- Remove tests that instantiate services with `new`.
 
-検証:
+Validation:
 
-- service tests は Spring injection。
-- pure class tests は non-DI class のみ直接 new。
+- Service tests use Spring injection.
+- Only non-DI classes are directly instantiated in pure-class tests.
 
-#### J-2. Test naming / AAA
+#### J-2. Test Naming / AAA
 
-対象指摘: #45, #46  
-対象ファイル: `ZeroHitDomainTests`, `AdminAuthServiceTests`
+Findings: #45, #46
+Files: `ZeroHitDomainTests`, `AdminAuthServiceTests`
 
-現状:
+Current state:
 
-- test method 名が `should_ExpectedResult_when_Condition` 形式でない。
-- `AdminAuthServiceTests` の一部 test は複数 Act と複数 behavior をまとめている。
+- Test method names do not follow the `should_ExpectedResult_when_Condition` format.
+- Some tests in `AdminAuthServiceTests` combine multiple Acts and multiple behaviors.
 
-最適な修正:
+Optimal remediation:
 
-- method 名を統一する。
+- Standardize method names.
   - `should_returnNormalizedKeyword_when_keywordContainsCaseAndWhitespace`
   - `should_calculateOpportunityLoss_when_hitCountAndAveragePriceProvided`
   - `should_choosePriority_when_hitCountCrossesThresholds`
-- login success / token uniqueness / token validation / missing credential / wrong credential / unconfigured credential を分ける。
-- `@DisplayName` は Medium だが、可読性のため合わせて追加してよい。
+- Separate login success / token uniqueness / token validation / missing credential / wrong credential / unconfigured credential.
+- `@DisplayName` is Medium severity, but may also be added for readability.
 
-検証:
+Validation:
 
-- test report で behavior が読みやすい。
-- single Act / single assertion focus が守られる。
+- Behaviors are easy to understand in test reports.
+- Single-Act / single-assertion focus is maintained.
 
-#### J-3. Stable version / publication metadata
+#### J-3. Stable Version / Publication Metadata
 
-対象指摘: #42  
-対象ファイル: `backend/pom.xml`
+Finding: #42
+File: `backend/pom.xml`
 
-現状:
+Current state:
 
-- version が `0.0.1-SNAPSHOT`。
-- license / scm metadata も空だが、これは escalation / publication readiness の範囲。
+- The version is `0.0.1-SNAPSHOT`.
+- License / SCM metadata is also empty, but that falls within escalation / publication readiness.
 
-最適な修正:
+Optimal remediation:
 
-- OSS 公開前の backend artifact は `0.1.0` に変更する。
-- root の OSS license 決定後、pom の license / scm を埋める。
-- release branch 以外で SNAPSHOT を使う場合は release process を docs に書く。
+- Change the backend artifact version to `0.1.0` before OSS publication.
+- After the root OSS license is finalized, populate license / SCM metadata in the POM.
+- If SNAPSHOT versions are used outside release branches, document the release process.
 
-検証:
+Validation:
 
-- `mvn help:evaluate -Dexpression=project.version` が `0.1.0`。
+- `mvn help:evaluate -Dexpression=project.version` returns `0.1.0`.
 
-## 4. 推奨実装順序
+## 4. Recommended Implementation Order
 
-1. Phase A の設計判断を docs に反映する。
-2. Phase B の validation / auth hardening を実装する。
-3. Phase C の PostgreSQL atomic upsert と concurrency test を実装する。
-4. Phase G の secret / profile 分離を実装し、docker compose を再検証する。
-5. Phase E の AI resilience / timeout / transaction 分離を実装する。
-6. Phase F の ProblemDetail / logging / correlation / headers を実装する。
-7. Phase D の GET 副作用分離を backend / frontend / design docs で同時実装する。
-8. Phase H の pagination / projection / null safety / entity annotation を実装する。
-9. Phase I の value object 化を実装する。
-10. Phase J の test / dependency / release hygiene を実装し、coverage を確認する。
+1. Reflect the Phase A design decisions in the documentation.
+2. Implement Phase B validation / authentication hardening.
+3. Implement the Phase C PostgreSQL atomic upsert and concurrency test.
+4. Implement the Phase G secret / profile separation and revalidate Docker Compose.
+5. Implement the Phase E AI resilience / timeout / transaction separation.
+6. Implement the Phase F ProblemDetail / logging / correlation / headers work.
+7. Implement the Phase D GET side-effect separation across backend / frontend / design documents at the same time.
+8. Implement the Phase H pagination / projection / null safety / entity annotations.
+9. Implement the Phase I value objects.
+10. Implement the Phase J test / dependency / release hygiene and verify coverage.
 
-## 5. 完了チェック
+## 5. Completion Checklist
 
-Critical / High 全体の完了条件:
+Completion criteria for all Critical / High findings:
 
-- `check-report-1.md` の Critical / High 全指摘が、修正済み、設計判断により例外承認済み、または別 issue として明示的に追跡済みである。
-- `./mvnw test` が成功する。
-- `./mvnw verify` で JaCoCo report が生成され、line / branch coverage 80% 以上を目標に確認する。
-- PostgreSQL Testcontainers または docker compose の PostgreSQL で zero-hit concurrency test が成功する。
-- docker compose で backend / frontend / db が起動し、主要 journey が動く。
-- API validation error、auth error、not found、server error が ProblemDetail 形式で安全に返る。
-- logs に password、token、API key、raw search keyword が出ない。
-- `application-docker.yml` と `application.yml` に secret fallback がない。
-- AI key 未設定、AI provider timeout、provider error でも admin AI consultation が fallback / controlled error で継続する。
-- frontend の検索、zero-hit 記録、admin dashboard、AI 相談、login / logout が主要画面で崩れていない。
+- Every Critical / High finding in `check-report-1.md` is fixed, approved as an exception through a design decision, or explicitly tracked as a separate issue.
+- `./mvnw test` succeeds.
+- `./mvnw verify` generates a JaCoCo report, and line / branch coverage is checked against the target of at least 80%.
+- The zero-hit concurrency test succeeds against PostgreSQL Testcontainers or the Docker Compose PostgreSQL instance.
+- Backend / frontend / db start through Docker Compose, and the primary journeys work.
+- API validation errors, authentication errors, not-found errors, and server errors are returned safely in ProblemDetail format.
+- Logs do not contain passwords, tokens, API keys, or raw search keywords.
+- `application-docker.yml` and `application.yml` contain no secret fallbacks.
+- Admin AI consultation continues with a fallback / controlled error when the AI key is missing, the AI provider times out, or the provider returns an error.
+- Frontend search, zero-hit recording, admin dashboard, AI consultation, and login / logout remain visually and functionally intact on the primary screens.
 
-## 6. 残すべき明示的な例外候補
+## 6. Explicit Exception Candidates to Retain
 
-次の項目は、修正ではなく project standard の明文化で解決する選択肢がある。
+The following items may be resolved by documenting the project standard rather than modifying the implementation.
 
-| 指摘 | 例外候補 | 推奨 |
+| Finding | Exception candidate | Recommendation |
 | --- | --- | --- |
-| #27 String UUID | PostgreSQL UUID を維持 | 設計書が UUID 前提のため、UUID 維持を推奨。 |
-| #2 package convention | `entity` / flat DTO を維持 | OSS 品質と将来拡張を考えると、最終的には `model` / request / response へ移行推奨。 |
-| #11 / #24 ApiErrorResponse | custom error contract を維持 | レビュー標準に合わせ、ProblemDetail へ移行推奨。 |
-| #19 virtual threads | profile-gated only | Java 21 backend としては有効化推奨。ただし MDC / request logging 検証を必須にする。 |
-| #6 / #37 GET side effect | GET 記録を維持 | 要件上は自然だが、HTTP semantics と security の観点では POST 分離推奨。 |
-
+| #27 String UUID | Retain PostgreSQL UUID | Because the design documents assume UUIDs, retaining UUID is recommended. |
+| #2 package convention | Retain `entity` / flat DTO | Considering OSS quality and future extensibility, eventual migration to `model` / request / response is recommended. |
+| #11 / #24 ApiErrorResponse | Retain custom error contract | Migration to ProblemDetail is recommended to align with the review standard. |
+| #19 virtual threads | profile-gated only | Enabling virtual threads is recommended for the Java 21 backend. However, validation of MDC / request logging is mandatory. |
+| #6 / #37 GET side effect | Retain GET recording | This is natural from the requirements perspective, but POST separation is recommended for HTTP semantics and security. |

@@ -1,105 +1,105 @@
-# Codex SDK Java Code Review Orchestrator 詳細設計書
+# Codex SDK Java Code Review Orchestrator Detailed Design
 
-## 1. 目的
+## 1. Purpose
 
-本設計書は、`docs/` 配下に定義された Java ソースコードレビュー用エージェント群を利用し、Codex SDK TypeScript 版でレビューオーケストレーション CLI アプリケーションを実装するための詳細設計を定義する。
+This document defines the detailed design for implementing a review orchestration CLI application with the TypeScript version of the Codex SDK, using the Java source code review agents defined under `docs/`.
 
-このアプリケーションは、開発プロセスのワークフローに組み込める品質で、指定された Java/Spring Boot コードを複数の観点から並列レビューし、結果を統合した最終レポートを生成する。
+The application must be suitable for integration into development workflows. It reviews specified Java/Spring Boot code in parallel from multiple perspectives and generates a final report that consolidates the results.
 
-重要要件は次の通り。
+The key requirements are as follows.
 
-- `docs/orchest-code-review.agent.md` の実行思想をアプリケーションとして再現する。
-- 観点別エージェントは Codex SDK の別スレッドとして並列実行する。
-- 競合する指摘がある場合は `orchest-code-review-tech-lead` が最終裁定する。
-- CLI 引数で単一エージェント、複数エージェント、または `full` を指定できる。
-- 実装コードは読みやすく、理解しやすく、OSS として公開しても問題ない品質にする。
+- Reproduce the execution principles of `docs/orchest-code-review.agent.md` as an application.
+- Run each perspective-specific agent in parallel as a separate Codex SDK thread.
+- When findings conflict, `orchest-code-review-tech-lead` makes the final adjudication.
+- Allow CLI arguments to specify one agent, multiple agents, or `full`.
+- Ensure the implementation is readable, understandable, and of sufficient quality for OSS publication.
 
-## 2. 参照仕様
+## 2. Reference Specifications
 
-### 2.1 公式 SDK 仕様
+### 2.1 Official SDK Specification
 
-Codex SDK TypeScript 版は `@openai/codex-sdk` として提供される。SDK は `@openai/codex` CLI をラップし、CLI プロセスと JSONL イベントを stdin/stdout で交換する。
+The TypeScript version of the Codex SDK is provided as `@openai/codex-sdk`. The SDK wraps the `@openai/codex` CLI and exchanges JSONL events with the CLI process through stdin/stdout.
 
-採用する SDK 機能は次の通り。
+The following SDK features are used.
 
-| 機能 | 用途 |
-|---|---|
-| `new Codex()` | Codex SDK クライアント生成 |
-| `codex.startThread()` | エージェントごとの独立レビュー用スレッド生成 |
-| `codex.resumeThread(threadId)` | 中断・再試行時に既存レビューセッションを再開 |
-| `thread.run(prompt, { outputSchema })` | レビュー結果を構造化 JSON で取得 |
-| `thread.runStreamed(prompt, { outputSchema, signal })` | 進捗ログ、usage、thread id、失敗イベントを逐次収集 |
-| `workingDirectory` | レビュー対象リポジトリの作業ディレクトリ指定 |
-| `skipGitRepoCheck` | Git リポジトリ外でもレビュー可能にするオプション |
-| `sandboxMode` | レビュー専用の read-only 実行を強制 |
-| `approvalPolicy` | CI/CD で対話待ちにならないよう承認方針を固定 |
-| `additionalDirectories` | `../instructions/` など repo 外参照を明示的に許可 |
-| `modelReasoningEffort` | レビュー品質とコストの調整 |
-| `config` | Codex CLI 設定の上書き |
+| Feature | Purpose |
+| --- | --- |
+| `new Codex()` | Create a Codex SDK client |
+| `codex.startThread()` | Create an independent review thread for each agent |
+| `codex.resumeThread(threadId)` | Resume an existing review session after interruption or for a retry |
+| `thread.run(prompt, { outputSchema })` | Obtain review results as structured JSON |
+| `thread.runStreamed(prompt, { outputSchema, signal })` | Incrementally collect progress logs, usage, thread id, and failure events |
+| `workingDirectory` | Specify the working directory of the repository under review |
+| `skipGitRepoCheck` | Allow reviews outside a Git repository |
+| `sandboxMode` | Enforce read-only execution dedicated to review |
+| `approvalPolicy` | Fix the approval policy to prevent interactive waits in CI/CD |
+| `additionalDirectories` | Explicitly allow references outside the repo, such as `../instructions/` |
+| `modelReasoningEffort` | Balance review quality and cost |
+| `config` | Override Codex CLI settings |
 
-参考:
+References:
 
-- https://developers.openai.com/codex/sdk
-- https://github.com/openai/codex/tree/main/sdk/typescript
+- <https://developers.openai.com/codex/sdk>
+- <https://github.com/openai/codex/tree/main/sdk/typescript>
 
-### 2.2 SDK 活用方針
+### 2.2 SDK Usage Policy
 
-本アプリケーションでは、Codex SDK を単なるプロンプト実行ラッパーではなく、レビューエージェント実行基盤として積極的に活用する。
+This application uses the Codex SDK as the execution platform for review agents, rather than merely as a prompt execution wrapper.
 
-| SDK 機能 | 活用方法 | 効果 |
-|---|---|---|
-| 独立 Thread | 各専門エージェントに 1 thread を割り当てる | 観点の混線を防ぎ、独立レビューを保証 |
-| 並列 Thread 実行 | `Promise.allSettled` と concurrency queue で同時実行 | 14 観点レビューの実行時間を短縮 |
-| Structured Output | `outputSchema` で JSON レビュー結果を強制 | 統合、重複排除、競合検出を安定化 |
-| Streaming Events | `runStreamed` の event をログ・監査・usage 集計に利用 | CI/CD で進捗と失敗原因を追跡可能 |
-| AbortSignal | timeout 時に Codex CLI 子プロセスへキャンセルを伝播 | runaway review を防止 |
-| Sandbox | `sandboxMode: "read-only"` を thread に指定 | レビュー中のソース変更を防止 |
-| Resume | `thread.id` を保存し、必要に応じて再開 | 長時間レビューや再試行に対応 |
+| SDK Feature | Usage | Benefit |
+| --- | --- | --- |
+| Independent Thread | Assign one thread to each specialist agent | Prevent perspective contamination and guarantee independent reviews |
+| Parallel Thread Execution | Execute concurrently with `Promise.allSettled` and a concurrency queue | Reduce execution time for reviews across 14 perspectives |
+| Structured Output | Enforce JSON review results with `outputSchema` | Stabilize integration, deduplication, and conflict detection |
+| Streaming Events | Use `runStreamed` events for logging, auditing, and usage aggregation | Make progress and failure causes traceable in CI/CD |
+| AbortSignal | Propagate cancellation to the Codex CLI child process on timeout | Prevent runaway reviews |
+| Sandbox | Set `sandboxMode: "read-only"` on each thread | Prevent source changes during review |
+| Resume | Save `thread.id` and resume when necessary | Support long-running reviews and retries |
 
-重要: 本設計の「マルチ・エージェント」は Codex の subagent 機能に依存しない。TypeScript SDK で複数の Codex thread を生成し、それぞれに `docs/*.agent.md` の専門エージェント定義をプロンプトとして注入することで、アプリケーション側が明示的にオーケストレーションする。
+Important: The "multi-agent" design does not depend on Codex subagent functionality. The application explicitly orchestrates multiple Codex threads created through the TypeScript SDK, injecting the specialist agent definition from `docs/*.agent.md` into each thread as a prompt.
 
-### 2.3 ローカルエージェント定義
+### 2.3 Local Agent Definitions
 
-本アプリケーションは、`docs/*.agent.md` をエージェント定義の唯一の情報源として扱う。エージェント定義ファイルはアプリケーション起動時に読み込み、レビュー観点、ペルソナ、チェック項目、出力形式をプロンプトに組み込む。
+The application treats `docs/*.agent.md` as the sole source of agent definitions. It loads these files at startup and incorporates their review perspective, persona, checklist, and output format into the prompt.
 
-| 論理名 | 定義ファイル | 役割 |
-|---|---|---|
-| `architecture` | `docs/orchest-code-review-architecture.agent.md` | レイヤ構造、依存方向、プロジェクト構造 |
-| `ddd-domain` | `docs/orchest-code-review-ddd-domain.agent.md` | DDD 戦術パターン、集約、値オブジェクト |
-| `api-endpoint` | `docs/orchest-code-review-api-endpoint.agent.md` | Spring MVC Controller、URL、入力検証 |
-| `java-standards` | `docs/orchest-code-review-java-standards.agent.md` | Java 21 コーディング標準、命名、禁止パターン |
-| `async-concurrency` | `docs/orchest-code-review-async-concurrency.agent.md` | 非同期処理、並行性、Virtual Thread |
-| `error-logging` | `docs/orchest-code-review-error-logging.agent.md` | 例外処理、ログ、可観測性 |
-| `data-access` | `docs/orchest-code-review-data-access.agent.md` | JPA、Repository、Query、Flyway |
-| `config-di` | `docs/orchest-code-review-config-di.agent.md` | Spring DI、設定、Security Filter Chain |
-| `security` | `docs/orchest-code-review-security.agent.md` | OWASP Top 10、STRIDE、攻撃耐性 |
-| `dependency` | `docs/orchest-code-review-dependency.agent.md` | Maven 依存、禁止依存、ライセンス |
-| `test-quality` | `docs/orchest-code-review-test-quality.agent.md` | テスト品質、AAA、カバレッジ |
-| `performance` | `docs/orchest-code-review-performance.agent.md` | 性能、N+1、メモリ、ページング |
-| `resilience` | `docs/orchest-code-review-resilience.agent.md` | 障害耐性、リトライ、タイムアウト、ヘルスチェック |
-| `tech-lead` | `docs/orchest-code-review-tech-lead.agent.md` | 横断レビュー、禁止パターン、競合裁定 |
+| Logical Name | Definition File | Role |
+| --- | --- | --- |
+| `architecture` | `docs/orchest-code-review-architecture.agent.md` | Layer structure, dependency direction, and project structure |
+| `ddd-domain` | `docs/orchest-code-review-ddd-domain.agent.md` | DDD tactical patterns, aggregates, and value objects |
+| `api-endpoint` | `docs/orchest-code-review-api-endpoint.agent.md` | Spring MVC controllers, URLs, and input validation |
+| `java-standards` | `docs/orchest-code-review-java-standards.agent.md` | Java 21 coding standards, naming, and prohibited patterns |
+| `async-concurrency` | `docs/orchest-code-review-async-concurrency.agent.md` | Asynchronous processing, concurrency, and Virtual Threads |
+| `error-logging` | `docs/orchest-code-review-error-logging.agent.md` | Exception handling, logging, and observability |
+| `data-access` | `docs/orchest-code-review-data-access.agent.md` | JPA, repositories, queries, and Flyway |
+| `config-di` | `docs/orchest-code-review-config-di.agent.md` | Spring DI, configuration, and Security Filter Chain |
+| `security` | `docs/orchest-code-review-security.agent.md` | OWASP Top 10, STRIDE, and attack resistance |
+| `dependency` | `docs/orchest-code-review-dependency.agent.md` | Maven dependencies, prohibited dependencies, and licenses |
+| `test-quality` | `docs/orchest-code-review-test-quality.agent.md` | Test quality, AAA, and coverage |
+| `performance` | `docs/orchest-code-review-performance.agent.md` | Performance, N+1, memory, and pagination |
+| `resilience` | `docs/orchest-code-review-resilience.agent.md` | Fault tolerance, retries, timeouts, and health checks |
+| `tech-lead` | `docs/orchest-code-review-tech-lead.agent.md` | Cross-cutting review, prohibited patterns, and conflict adjudication |
 
-`docs/orchest-code-review.agent.md` はオーケストレータ仕様として読み込み、実行フロー、判定基準、競合解決ルール、レポート形式の基準にする。
+Load `docs/orchest-code-review.agent.md` as the orchestrator specification and use it as the basis for the execution flow, decision criteria, conflict-resolution rules, and report format.
 
-## 3. システム概要
+## 3. System Overview
 
-### 3.1 アプリケーション種別
+### 3.1 Application Type
 
-Node.js / TypeScript の CLI アプリケーションとして実装する。
+Implement the system as a Node.js / TypeScript CLI application.
 
-推奨パッケージ名:
+Recommended package name:
 
 ```text
 java-code-review-orchestrator
 ```
 
-推奨 CLI 名:
+Recommended CLI name:
 
 ```text
 code-review
 ```
 
-### 3.2 全体アーキテクチャ
+### 3.2 Overall Architecture
 
 ```mermaid
 flowchart LR
@@ -129,21 +129,21 @@ flowchart LR
   Report --> Persist
 ```
 
-### 3.3 実行モデル
+### 3.3 Execution Model
 
-1. CLI 引数を解析する。
-2. `docs/` 配下のエージェント定義を読み込む。
-3. レビュー対象ファイルを解決する。
-4. 指定されたエージェントごとに Codex SDK の独立スレッドを生成する。
-5. `Promise.allSettled` と同時実行数制御でレビューを並列実行する。
-6. 各エージェントから構造化 JSON のレビュー結果を受け取る。
-7. 指摘を重複排除し、最高 severity を採用する。
-8. 矛盾する指摘があれば Tech Lead エージェントを別スレッドで再実行し裁定する。
-9. 統合レポートを Markdown と JSON で保存する。
+1. Parse CLI arguments.
+2. Load the agent definitions under `docs/`.
+3. Resolve the files to review.
+4. Create an independent Codex SDK thread for each specified agent.
+5. Run reviews in parallel with `Promise.allSettled` and concurrency limits.
+6. Receive structured JSON review results from each agent.
+7. Deduplicate findings and retain the highest severity.
+8. If findings conflict, run the Tech Lead agent in a separate thread for adjudication.
+9. Save the integrated report in Markdown and JSON formats.
 
-## 4. CLI 仕様
+## 4. CLI Specification
 
-### 4.1 基本コマンド
+### 4.1 Basic Commands
 
 ```bash
 code-review --target full --agents full
@@ -152,33 +152,33 @@ code-review --target src/main/java/com/skishop/controller --agents security
 code-review --target src/main/java --agents security,performance,data-access
 ```
 
-### 4.2 引数
+### 4.2 Arguments
 
-| 引数 | 必須 | 既定値 | 説明 |
-|---|---:|---|---|
-| `--target <path|full>` | 条件付き | なし | レビュー対象。`full`、ファイル、またはディレクトリを指定 |
-| `--target-dir <directory>` | 条件付き | なし | レビュー対象ディレクトリを明示指定。`--target` より意図が明確なディレクトリ専用オプション |
-| `--agents <name[,name]|full>` | No | `full` | 実行するエージェント |
-| `--repo <path>` | No | `process.cwd()` | レビュー対象リポジトリ |
-| `--docs <path>` | No | `<repo>/docs` | エージェント定義ディレクトリ |
-| `--out <path>` | No | `<repo>/../review-reports/code-review` | レポート出力ルート |
-| `--concurrency <number>` | No | `7` | 観点別レビューの最大同時実行数 |
-| `--timeout-ms <number>` | No | `900000` | 1 エージェントあたりのタイムアウト |
-| `--model <model>` | No | Codex CLI 既定 | Codex SDK thread で使うモデル |
-| `--reasoning <minimal|low|medium|high|xhigh>` | No | `high` | `modelReasoningEffort` |
-| `--sandbox <read-only|workspace-write|danger-full-access>` | No | `read-only` | レビュー実行時の sandbox。通常は変更しない |
-| `--web-search <disabled|cached|live>` | No | `disabled` | レビュー中の web search 利用方針 |
-| `--format <markdown|json|both>` | No | `both` | 出力形式 |
-| `--fail-on <critical|high|none>` | No | `critical` | 終了コードを失敗にする最低 severity |
-| `--skip-git-repo-check` | No | `false` | Codex SDK の Git リポジトリ確認をスキップ |
-| `--dry-run` | No | `false` | 実行計画のみ表示 |
-| `--verbose` | No | `false` | 詳細ログ出力 |
+| Argument | Required | Default | Description |
+| --- | ---: | --- | --- |
+| `--target <path\|full>` | Conditional | None | Review target. Specify `full`, a file, or a directory |
+| `--target-dir <directory>` | Conditional | None | Explicitly specify the review target directory. A directory-only option that communicates intent more clearly than `--target` |
+| `--agents <name[,name]\|full>` | No | `full` | Agents to run |
+| `--repo <path>` | No | `process.cwd()` | Repository to review |
+| `--docs <path>` | No | `<repo>/docs` | Agent definition directory |
+| `--out <path>` | No | `<repo>/../review-reports/code-review` | Report output root |
+| `--concurrency <number>` | No | `7` | Maximum number of concurrent perspective-specific reviews |
+| `--timeout-ms <number>` | No | `900000` | Timeout per agent |
+| `--model <model>` | No | Codex CLI default | Model used by Codex SDK threads |
+| `--reasoning <minimal\|low\|medium\|high\|xhigh>` | No | `high` | `modelReasoningEffort` |
+| `--sandbox <read-only\|workspace-write\|danger-full-access>` | No | `read-only` | Sandbox used for review execution. Normally unchanged |
+| `--web-search <disabled\|cached\|live>` | No | `disabled` | Web search policy during review |
+| `--format <markdown\|json\|both>` | No | `both` | Output format |
+| `--fail-on <critical\|high\|none>` | No | `critical` | Minimum severity that causes a failure exit code |
+| `--skip-git-repo-check` | No | `false` | Skip the Codex SDK Git repository check |
+| `--dry-run` | No | `false` | Display only the execution plan |
+| `--verbose` | No | `false` | Emit detailed logs |
 
-`--target` と `--target-dir` のどちらか一方は必須とする。両方を同時に指定した場合は、曖昧なレビュー範囲を避けるため CLI 引数エラーとして終了コード `2` で停止する。
+Exactly one of `--target` and `--target-dir` is required. If both are specified, stop with exit code `2` as a CLI argument error to avoid an ambiguous review scope.
 
-### 4.3 エージェント指定
+### 4.3 Agent Selection
 
-`--agents` は次の形式を受け付ける。
+`--agents` accepts the following formats.
 
 ```text
 full
@@ -187,39 +187,39 @@ security,performance,data-access
 orchest-code-review-security
 ```
 
-正規化ルール:
+Normalization rules:
 
-- `full` は全 14 エージェントを意味する。
-- `orchest-code-review-` 接頭辞は省略可能。
-- `.agent.md` 拡張子は指定不可。指定された場合はエラーにする。
-- 不明なエージェント名は起動前にエラーにする。
-- `tech-lead` は通常レビュー対象として指定可能。ただし競合裁定時は、通常レビューとは別スレッドで追加実行する。
+- `full` means all 14 agents.
+- The `orchest-code-review-` prefix is optional.
+- The `.agent.md` extension must not be specified. Treat it as an error when present.
+- Reject unknown agent names before execution starts.
+- `tech-lead` may be selected as a regular review agent. During conflict adjudication, however, run it additionally in a thread separate from the regular review.
 
-### 4.4 ターゲット指定ルール
+### 4.4 Target Selection Rules
 
-| 指定方法 | 例 | 扱い |
-|---|---|---|
-| 全体レビュー | `--target full` | `--repo` 配下全体をレビュー |
-| ファイル指定 | `--target src/main/java/com/skishop/Product.java` | 指定ファイルのみレビュー |
-| ディレクトリ指定 | `--target src/main/java/com/skishop/controller` | 指定ディレクトリ配下をレビュー |
-| ディレクトリ明示指定 | `--target-dir src/main/java/com/skishop/controller` | 指定ディレクトリ配下をレビュー。ファイルパスは不可 |
+| Selection Method | Example | Handling |
+| --- | --- | --- |
+| Full review | `--target full` | Review everything under `--repo` |
+| File selection | `--target src/main/java/com/skishop/Product.java` | Review only the specified file |
+| Directory selection | `--target src/main/java/com/skishop/controller` | Review the contents of the specified directory |
+| Explicit directory selection | `--target-dir src/main/java/com/skishop/controller` | Review the contents of the specified directory. File paths are not allowed |
 
-`--target-dir` は、CI/CD や npm scripts で「ディレクトリをレビューする」という意図を明確にするための専用オプションである。指定値が存在しない、またはディレクトリではない場合は終了コード `3` で停止する。
+`--target-dir` is a dedicated option that clearly expresses the intent to review a directory in CI/CD or npm scripts. If the specified value does not exist or is not a directory, stop with exit code `3`.
 
-### 4.5 終了コード
+### 4.5 Exit Codes
 
-| 終了コード | 意味 |
-|---:|---|
-| `0` | レビュー完了。`fail-on` 条件に該当なし |
-| `1` | レビュー完了。ただし `fail-on` 条件に該当 |
-| `2` | CLI 引数または設定エラー |
-| `3` | レビュー対象パス不正、または対象ファイルが 0 件 |
-| `4` | 全エージェント実行失敗 |
-| `5` | レポート保存失敗 |
+| Exit Code | Meaning |
+| ---: | --- |
+| `0` | Review completed without meeting the `fail-on` condition |
+| `1` | Review completed but met the `fail-on` condition |
+| `2` | CLI argument or configuration error |
+| `3` | Invalid review target path or zero target files |
+| `4` | All agent executions failed |
+| `5` | Report persistence failed |
 
-## 5. ディレクトリ構成
+## 5. Directory Structure
 
-実装時は次の構成を推奨する。
+The following implementation structure is recommended.
 
 ```text
 .
@@ -262,7 +262,7 @@ orchest-code-review-security
     └── fixtures
 ```
 
-### 5.1 推奨 npm 依存関係
+### 5.1 Recommended npm Dependencies
 
 ```json
 {
@@ -284,9 +284,9 @@ orchest-code-review-security
 }
 ```
 
-`@openai/codex-sdk` のバージョンは実装時点の最新版を確認し、`^` ではなく exact version で固定する。OSS 公開時は lockfile を含め、SDK の破壊的変更による CI 失敗を防ぐ。上記の `<implementation-time-exact-version>` は実装時に実バージョンへ置き換える。
+At implementation time, confirm the latest version of `@openai/codex-sdk` and pin an exact version rather than using `^`. Include the lockfile in the OSS release to prevent CI failures caused by breaking SDK changes. Replace `<implementation-time-exact-version>` above with the actual version during implementation.
 
-## 6. データモデル
+## 6. Data Model
 
 ### 6.1 Severity
 
@@ -294,7 +294,7 @@ orchest-code-review-security
 export type Severity = "Critical" | "High" | "Medium" | "Low";
 ```
 
-Severity の優先順位:
+Severity precedence:
 
 ```typescript
 const severityRank = {
@@ -451,7 +451,7 @@ export interface AdjudicationResult {
 
 ### 6.9 ReviewJob / Runner Models
 
-Codex SDK 呼び出しの境界では、次の実行時モデルを使う。
+Use the following runtime models at the Codex SDK invocation boundary.
 
 ```typescript
 import type { Codex, ThreadEvent, ThreadOptions } from "@openai/codex-sdk";
@@ -479,11 +479,11 @@ export interface ReviewExecutionPlan {
 }
 ```
 
-`ReviewJob` は SDK 実行に必要な情報をすべて持つ。これにより、`ReviewRunner` は CLI 引数やファイル探索の詳細を知らず、単に job を実行して `AgentReviewResult` を返す責務に集中できる。
+`ReviewJob` contains all information required for SDK execution. This allows `ReviewRunner` to remain unaware of CLI arguments and file-discovery details and focus solely on executing a job and returning an `AgentReviewResult`.
 
 ### 6.10 TargetInput
 
-CLI の `--target` と `--target-dir` は、解析直後に次の union 型へ正規化する。
+Immediately after parsing, normalize the CLI options `--target` and `--target-dir` into the following union type.
 
 ```typescript
 export type TargetInput =
@@ -492,13 +492,13 @@ export type TargetInput =
   | { kind: "directory"; raw: string; absolutePath: string };
 ```
 
-`AppOptions.rawTarget` は表示・レポート用の元入力、`TargetInput` は resolver 内部の判定済み入力として扱う。
+Treat `AppOptions.rawTarget` as the original input for display and reporting, and `TargetInput` as the validated input used internally by the resolver.
 
-## 7. 構造化出力スキーマ
+## 7. Structured Output Schemas
 
-Codex SDK の `thread.run(prompt, { outputSchema })` を使い、各エージェントに JSON 形式の結果を要求する。Markdown レポートだけに依存すると統合処理が不安定になるため、統合処理は必ず JSON を正とする。
+Use the Codex SDK method `thread.run(prompt, { outputSchema })` to require each agent to return results in JSON format. Because relying only on Markdown reports makes integration unstable, JSON must always be the authoritative format for integration.
 
-### 7.1 レビュー結果スキーマ
+### 7.1 Review Result Schema
 
 ```typescript
 export const agentReviewOutputSchema = {
@@ -560,7 +560,7 @@ export const agentReviewOutputSchema = {
 } as const;
 ```
 
-### 7.2 Tech Lead 裁定スキーマ
+### 7.2 Tech Lead Adjudication Schema
 
 ```typescript
 export const adjudicationOutputSchema = {
@@ -596,9 +596,9 @@ export const adjudicationOutputSchema = {
 } as const;
 ```
 
-### 7.3 スキーマ実装方針
+### 7.3 Schema Implementation Policy
 
-実装では Zod スキーマを単一の真実源にし、Codex SDK へ渡す JSON Schema は `zod-to-json-schema` で生成することを推奨する。
+The implementation should use the Zod schema as the single source of truth and generate the JSON Schema passed to the Codex SDK with `zod-to-json-schema`.
 
 ```typescript
 import { z } from "zod";
@@ -619,55 +619,55 @@ export const agentReviewOutputSchema = zodToJsonSchema(AgentReviewSchema, {
 });
 ```
 
-レスポンス処理は次の順で行う。
+Process responses in the following order.
 
-1. `turn.finalResponse` または streaming の最後の `agent_message.text` を取得する。
-2. `JSON.parse` で object に変換する。
-3. `AgentReviewSchema.safeParse` で検証する。
-4. 成功した場合のみ `AgentReviewResult.status = "completed"` とする。
-5. 失敗した場合は `status = "error"`、`verdict = "incomplete"` とし、raw response と validation error を保存する。
+1. Obtain `turn.finalResponse` or the final `agent_message.text` from streaming.
+2. Convert it to an object with `JSON.parse`.
+3. Validate it with `AgentReviewSchema.safeParse`.
+4. Set `AgentReviewResult.status = "completed"` only when validation succeeds.
+5. On failure, set `status = "error"` and `verdict = "incomplete"`, and save the raw response and validation error.
 
-出力スキーマと内部モデルの差分:
+Differences between the output schema and the internal model:
 
-- エージェント出力の `findings[].sourceAgents` は要求しない。normalizer が実行元 `agentId` を `sourceAgents: [agentId]` として付与する。
-- エージェント出力の `escalations[].sourceAgents` も要求しない。normalizer が付与する。
-- `finding.id` は normalizer が stable hash で生成する。
-- `threadId`、`usage`、`startedAt`、`completedAt`、`durationMs` は SDK 実行結果から付与する。
-- `lineStart` / `lineEnd` は optional とするが、Prompt では可能な限り具体的な行番号を要求する。
+- Do not require `findings[].sourceAgents` in agent output. The normalizer assigns the executing `agentId` as `sourceAgents: [agentId]`.
+- Do not require `escalations[].sourceAgents` in agent output either. The normalizer assigns it.
+- The normalizer generates `finding.id` with a stable hash.
+- Populate `threadId`, `usage`, `startedAt`, `completedAt`, and `durationMs` from SDK execution results.
+- Keep `lineStart` / `lineEnd` optional, but require specific line numbers in the prompt whenever possible.
 
-## 8. エージェント定義ローダー
+## 8. Agent Definition Loader
 
-### 8.1 読み込み対象
+### 8.1 Files to Load
 
-`docs/` 配下の `orchest-code-review-*.agent.md` を読み込む。ただし、`docs/orchest-code-review.agent.md` はエージェントではなくオーケストレータ定義として別扱いにする。
+Load `orchest-code-review-*.agent.md` files under `docs/`. Treat `docs/orchest-code-review.agent.md` separately as an orchestrator definition rather than an agent.
 
 ### 8.2 Front Matter
 
-定義ファイル先頭の YAML front matter から最低限 `description` と `user-invocable` を抽出する。
+Extract at least `description` and `user-invocable` from the YAML front matter at the beginning of each definition file.
 
-実装には `gray-matter` の利用を推奨する。
+Use of `gray-matter` is recommended for the implementation.
 
 ```typescript
 import matter from "gray-matter";
 ```
 
-### 8.3 バリデーション
+### 8.3 Validation
 
-起動時に次を検証する。
+Validate the following at startup.
 
-- 全 14 エージェント定義が存在する。
-- `tech-lead` 定義が存在する。
-- `orchest-code-review.agent.md` が存在する。
-- エージェント ID の重複がない。
-- `full` に含まれるエージェント数が 14 である。
+- All 14 agent definitions exist.
+- The `tech-lead` definition exists.
+- `orchest-code-review.agent.md` exists.
+- Agent IDs are unique.
+- `full` contains exactly 14 agents.
 
-不足がある場合は実行前に終了コード `2` で停止する。
+If any requirement is missing, stop before execution with exit code `2`.
 
-## 9. レビュー対象解決
+## 9. Review Target Resolution
 
-### 9.1 対象ファイルパターン
+### 9.1 Target File Patterns
 
-`docs/orchest-code-review.agent.md` に従い、次をレビュー対象に含める。
+In accordance with `docs/orchest-code-review.agent.md`, include the following review targets.
 
 ```text
 **/*.java
@@ -685,9 +685,9 @@ import matter from "gray-matter";
 
 ### 9.2 `full`
 
-`--target full` の場合、`--repo` 配下全体から対象ファイルを列挙する。
+For `--target full`, enumerate target files from the entire tree under `--repo`.
 
-除外するディレクトリ:
+Excluded directories:
 
 ```text
 .git
@@ -701,22 +701,22 @@ dist
 review-reports
 ```
 
-### 9.3 ディレクトリ指定
+### 9.3 Directory Selection
 
-`--target-dir <directory>` の場合、指定ディレクトリ配下からレビュー対象ファイルパターンに一致するファイルのみを列挙する。
+For `--target-dir <directory>`, enumerate only files under the specified directory that match the review target file patterns.
 
-実装ルール:
+Implementation rules:
 
-- `<directory>` は `--repo` からの相対パス、または絶対パスを受け付ける。
-- 相対パスは `path.resolve(repoRoot, targetDir)` で解決する。
-- 解決後のパスが `repoRoot` 配下にない場合は終了コード `2` で停止する。
-- 解決後のパスが存在しない場合、またはディレクトリではない場合は終了コード `3` で停止する。
-- `targetName` はディレクトリ名を slug 化して決定する。例: `src/main/java/com/skishop/controller` は `controller`。
-- `--target-dir` でファイルパスが指定された場合は、ディレクトリ専用オプションの誤用として終了コード `3` で停止する。
+- `<directory>` accepts either a path relative to `--repo` or an absolute path.
+- Resolve relative paths with `path.resolve(repoRoot, targetDir)`.
+- If the resolved path is not under `repoRoot`, stop with exit code `2`.
+- If the resolved path does not exist or is not a directory, stop with exit code `3`.
+- Determine `targetName` by converting the directory name to a slug. For example, `src/main/java/com/skishop/controller` becomes `controller`.
+- If a file path is specified with `--target-dir`, treat it as misuse of the directory-only option and stop with exit code `3`.
 
-`--target <path>` にディレクトリが指定された場合も同じ列挙処理を利用する。ただし CLI の意図を明確にするため、ドキュメントや CI/CD 例ではディレクトリ指定に `--target-dir` を推奨する。
+Use the same enumeration process when `--target <path>` specifies a directory. To make CLI intent explicit, however, documentation and CI/CD examples should recommend `--target-dir` for directory selection.
 
-### 9.4 Target Resolver 疑似コード
+### 9.4 Target Resolver Pseudocode
 
 ```typescript
 export async function resolveTarget(options: AppOptions): Promise<ReviewTarget> {
@@ -747,20 +747,20 @@ export async function resolveTarget(options: AppOptions): Promise<ReviewTarget> 
 }
 ```
 
-`normalizeTargetInput` のルール:
+Rules for `normalizeTargetInput`:
 
-| 入力 | 判定 |
-|---|---|
+| Input | Result |
+| --- | --- |
 | `--target full` | `{ kind: "full" }` |
 | `--target <existing-file>` | `{ kind: "file" }` |
 | `--target <existing-directory>` | `{ kind: "directory" }` |
 | `--target-dir <existing-directory>` | `{ kind: "directory" }` |
 | `--target-dir <file>` | `CliError(exitCode: 3)` |
-| repo 外の絶対パス | `CliError(exitCode: 2)` |
+| Absolute path outside the repo | `CliError(exitCode: 2)` |
 
-### 9.5 標準・設計参照ファイル
+### 9.5 Standards and Design Reference Files
 
-レビュー Prompt に含める参照ファイルは resolver で探索し、存在するものだけを渡す。
+The resolver discovers reference files to include in the review prompt and passes only those that exist.
 
 ```text
 AGENTS.md
@@ -770,24 +770,24 @@ docs/migration/PLAN.md
 ../instructions/*.instructions.md
 ```
 
-`../instructions/` は `repoRoot` 外にある可能性があるため、存在する場合は `ThreadOptions.additionalDirectories` に親ディレクトリを追加する。存在しない場合は warning に留める。
+Because `../instructions/` may be outside `repoRoot`, add its parent directory to `ThreadOptions.additionalDirectories` when it exists. If it does not exist, emit only a warning.
 
-### 9.6 ファイル数制限
+### 9.6 File Count Limits
 
-OSS 品質の実装として、巨大リポジトリに対しても制御可能にする。
+An OSS-quality implementation must remain controllable for large repositories.
 
-推奨:
+Recommendations:
 
-- 対象ファイル数が 0 件なら終了コード `3`。
-- 対象ファイル数が 300 件を超える場合は警告を出す。
-- 1 エージェントのプロンプトには全ファイル内容を貼り付けない。
-- プロンプトにはファイル一覧、対象パス、参照ドキュメントの場所を渡し、Codex に作業ディレクトリ内で読むよう指示する。
+- If there are zero target files, use exit code `3`.
+- Warn when the target file count exceeds 300.
+- Do not paste the contents of every file into a single agent prompt.
+- Pass the file list, target paths, and reference document locations in the prompt, and instruct Codex to read them within the working directory.
 
-## 10. プロンプト設計
+## 10. Prompt Design
 
-### 10.1 共通レビュー Prompt
+### 10.1 Common Review Prompt
 
-各エージェントに渡すプロンプトは次の構成にする。
+Use the following prompt structure for each agent.
 
 ```text
 You are running as the agent defined below.
@@ -820,13 +820,13 @@ Return JSON matching the provided schema.
 Also include a concise markdown detail report in rawMarkdown.
 ```
 
-### 10.2 独立性の保証
+### 10.2 Independence Guarantee
 
-観点別レビュー Prompt には他エージェントの結果を渡さない。これにより、`docs/orchest-code-review.agent.md` の「各 Agent は独立して判断する」原則を守る。
+Do not pass results from other agents into a perspective-specific review prompt. This preserves the principle in `docs/orchest-code-review.agent.md` that each agent makes an independent judgment.
 
-### 10.3 Tech Lead 裁定 Prompt
+### 10.3 Tech Lead Adjudication Prompt
 
-競合検出後、Tech Lead にだけ次を渡す。
+After detecting conflicts, pass the following only to the Tech Lead.
 
 ```text
 You are the Tech Lead final adjudicator defined below.
@@ -852,9 +852,9 @@ Output:
 Return JSON matching the adjudication schema.
 ```
 
-## 11. Codex SDK 実行設計
+## 11. Codex SDK Execution Design
 
-### 11.1 クライアント生成
+### 11.1 Client Creation
 
 ```typescript
 import { Codex } from "@openai/codex-sdk";
@@ -872,13 +872,13 @@ export function createCodexClient(options: AppOptions): Codex {
 }
 ```
 
-`env` を指定した場合、SDK は Node.js プロセスの環境変数を自動継承しない。そのため `PATH`、`HOME`、`CODEX_API_KEY` など Codex CLI 実行に必要な環境だけを明示的に引き継ぐ。API キーの値はログに出さない。
+When `env` is specified, the SDK does not automatically inherit environment variables from the Node.js process. Therefore, explicitly pass through only the environment required to run the Codex CLI, such as `PATH`, `HOME`, and `CODEX_API_KEY`. Do not log API key values.
 
-`config` は CLI の `--config key=value` 上書きに変換される。sandbox や working directory のような thread 単位の設定は `config` ではなく `startThread` の `ThreadOptions` に指定する。
+`config` is converted into CLI `--config key=value` overrides. Specify per-thread settings such as the sandbox and working directory in the `ThreadOptions` passed to `startThread`, not in `config`.
 
 ### 11.2 ThreadOptions
 
-各レビューエージェントに独立スレッドを割り当て、レビュー専用の read-only 実行を強制する。
+Assign an independent thread to each review agent and enforce read-only execution dedicated to review.
 
 ```typescript
 import type { ThreadOptions } from "@openai/codex-sdk";
@@ -898,26 +898,26 @@ export function buildThreadOptions(options: AppOptions): ThreadOptions {
 }
 ```
 
-| 設定 | 方針 |
-|---|---|
-| `sandboxMode: "read-only"` | レビュー中のファイル変更を防止 |
-| `approvalPolicy: "never"` | CI/CD で対話承認待ちを避ける |
-| `networkAccessEnabled: false` | レビュー対象コードと定義ファイルに閉じた評価を優先 |
-| `webSearchMode: "disabled"` | エージェント間で外部情報差が出ることを防ぐ |
-| `additionalDirectories` | `../instructions/` など必要な repo 外参照を明示 |
-| `modelReasoningEffort` | 既定は `high`。コスト優先時は CLI 引数で変更可能にする |
+| Setting | Policy |
+| --- | --- |
+| `sandboxMode: "read-only"` | Prevent file changes during review |
+| `approvalPolicy: "never"` | Avoid waiting for interactive approval in CI/CD |
+| `networkAccessEnabled: false` | Prefer evaluation limited to the code and definition files under review |
+| `webSearchMode: "disabled"` | Prevent differences in external information between agents |
+| `additionalDirectories` | Explicitly declare required references outside the repo, such as `../instructions/` |
+| `modelReasoningEffort` | Default to `high`; allow changes through a CLI argument when cost is prioritized |
 
-スレッド生成:
+Thread creation:
 
 ```typescript
 const thread = codex.startThread(buildThreadOptions(options));
 ```
 
-同一スレッドを複数エージェントで共有しない。共有するとレビュー観点が混ざり、独立性が損なわれる。
+Do not share a thread among multiple agents. Sharing would mix review perspectives and compromise independence.
 
-### 11.3 レビュー実行と構造化レスポンス処理
+### 11.3 Review Execution and Structured Response Processing
 
-標準実装では `runStreamed` を使う。`run()` は最終結果だけが必要な簡易実装として利用できるが、CI/CD での監査性、進捗表示、usage 集計、thread id 保存のため、production 実装では streaming を推奨する。
+Use `runStreamed` in the standard implementation. `run()` may be used in a simple implementation that needs only the final result, but streaming is recommended for production to provide CI/CD auditability, progress display, usage aggregation, and thread id persistence.
 
 ```typescript
 export async function runSingleAgentReview(job: ReviewJob): Promise<AgentReviewResult> {
@@ -973,11 +973,11 @@ export async function runSingleAgentReview(job: ReviewJob): Promise<AgentReviewR
 }
 ```
 
-`finalResponse` は structured output 利用時も string として返るため、必ず `JSON.parse` し、Zod などで実行時検証する。検証に失敗した場合は `status: "error"` として raw response を保持し、統合レポートの Incomplete Reviews に記録する。
+Because `finalResponse` is returned as a string even when structured output is used, always apply `JSON.parse` and runtime validation with Zod or an equivalent validator. If validation fails, retain the raw response with `status: "error"` and record it under Incomplete Reviews in the integrated report.
 
-### 11.4 `run()` を使う簡易実装
+### 11.4 Simple Implementation Using `run()`
 
-最小構成では次のように `run()` を利用できる。
+In the minimal configuration, use `run()` as follows.
 
 ```typescript
 const thread = codex.startThread(buildThreadOptions(options));
@@ -985,13 +985,13 @@ const turn = await thread.run(prompt, { outputSchema: agentReviewOutputSchema })
 const parsed = parseAgentReviewJson(turn.finalResponse);
 ```
 
-ただし `run()` は完了まで buffering するため、長時間レビューでは progress log と cancellation handling の観点から `runStreamed()` を優先する。
+Because `run()` buffers until completion, prefer `runStreamed()` for long-running reviews to support progress logs and cancellation handling.
 
-### 11.5 並列実行
+### 11.5 Parallel Execution
 
-標準では最大 7 並列で実行する。`docs/orchest-code-review.agent.md` の 2 バッチ構成を再現するため、`full` の既定同時実行数は `7` とする。
+Run with a maximum concurrency of 7 by default. To reproduce the two-batch structure in `docs/orchest-code-review.agent.md`, set the default concurrency for `full` to `7`.
 
-ただし実装は固定 2 バッチではなく、`--concurrency` で制御できる汎用キューにする。これにより、将来エージェント数が増減しても対応できる。
+The implementation must use a general-purpose queue controlled by `--concurrency`, rather than two fixed batches. This supports future increases or decreases in the number of agents.
 
 ```typescript
 export async function runReviewsInParallel(
@@ -1004,9 +1004,9 @@ export async function runReviewsInParallel(
 }
 ```
 
-### 11.6 タイムアウト
+### 11.6 Timeout
 
-1 エージェントごとに `--timeout-ms` を適用する。timeout は単なる `Promise.race` ではなく `AbortController` を使い、Codex SDK に `signal` を渡す。これにより SDK が起動した Codex CLI 子プロセスにもキャンセルを伝播できる。
+Apply `--timeout-ms` to each agent. Implement timeouts with `AbortController`, not merely `Promise.race`, and pass the `signal` to the Codex SDK. This propagates cancellation to the Codex CLI child process started by the SDK.
 
 ```typescript
 function createTimeoutController(timeoutMs: number): {
@@ -1022,11 +1022,11 @@ function createTimeoutController(timeoutMs: number): {
 }
 ```
 
-タイムアウトしたエージェントは `status: "timeout"` として記録し、他のレビューは継続する。
+Record a timed-out agent with `status: "timeout"` and continue the other reviews.
 
-### 11.7 thread id と再開
+### 11.7 Thread ID and Resume
 
-各エージェント結果には `threadId` を保存する。
+Save `threadId` in each agent result.
 
 ```typescript
 export interface AgentReviewResult {
@@ -1037,50 +1037,50 @@ export interface AgentReviewResult {
 }
 ```
 
-将来、長時間レビューの途中再開や調査継続が必要な場合は `codex.resumeThread(threadId)` を利用する。ただし同一レビュー実行内では、専門エージェントの独立性を守るため、別エージェントの thread を resume しない。
+In the future, use `codex.resumeThread(threadId)` when a long-running review must resume or an investigation must continue. Within the same review execution, however, never resume another agent's thread, in order to preserve specialist-agent independence.
 
-### 11.8 失敗時の扱い
+### 11.8 Failure Handling
 
-`Promise.allSettled` を使い、1 エージェントの失敗で全体を止めない。
+Use `Promise.allSettled` so that one agent failure does not stop the entire process.
 
-| 状況 | 扱い |
-|---|---|
-| 一部エージェント失敗 | 統合レポートを生成し、失敗エージェントを Incomplete とする |
-| 全エージェント失敗 | 終了コード `4` |
-| 構造化 JSON 不正 | `status: "error"` として raw response を保存 |
-| Tech Lead 裁定失敗 | 競合未解決として Escalation Items に追加 |
+| Situation | Handling |
+| --- | --- |
+| Some agents fail | Generate the integrated report and mark failed agents as Incomplete |
+| All agents fail | Exit code `4` |
+| Invalid structured JSON | Save the raw response with `status: "error"` |
+| Tech Lead adjudication fails | Add the unresolved conflict to Escalation Items |
 
-### 11.9 Codex SDK 境界の実装責務
+### 11.9 Responsibilities at the Codex SDK Boundary
 
-`src/codex/review-runner.ts` は次だけを担当する。
+`src/codex/review-runner.ts` is responsible only for the following.
 
-- `Codex` client から thread を開始する。
-- `runStreamed` を呼び出す。
-- `ThreadEvent` を `eventSink` に渡す。
-- 最後の `agent_message.text` を取り出す。
-- usage と thread id を収集する。
-- timeout、abort、SDK error を `AgentReviewResult` へ正規化する。
+- Start a thread from the `Codex` client.
+- Invoke `runStreamed`.
+- Pass each `ThreadEvent` to `eventSink`.
+- Extract the final `agent_message.text`.
+- Collect usage and thread id.
+- Normalize timeout, abort, and SDK error conditions into `AgentReviewResult`.
 
-次は担当しない。
+It is not responsible for the following.
 
-- エージェント選択。
-- 対象ファイル探索。
-- Prompt 生成。
-- finding の重複排除。
-- verdict 計算。
-- レポート保存。
+- Agent selection.
+- Target file discovery.
+- Prompt generation.
+- Finding deduplication.
+- Verdict calculation.
+- Report persistence.
 
-この境界により、Codex SDK を使わない Fake runner をテストで差し替えられる。
+This boundary allows tests to substitute a Fake runner that does not use the Codex SDK.
 
-## 12. 結果統合
+## 12. Result Integration
 
-### 12.1 Critical 早期検出
+### 12.1 Early Critical Detection
 
-レビュー完了後、統合処理の最初に全結果を走査し、Critical が 1 件以上あれば最終判定を自動的に `Rejected` とする。
+After reviews complete, scan all results at the beginning of integration. If one or more Critical findings exist, automatically set the final verdict to `Rejected`.
 
-### 12.2 重複排除
+### 12.2 Deduplication
 
-重複判定キー:
+Deduplication key:
 
 ```text
 normalized(targetFile)
@@ -1089,50 +1089,50 @@ normalized(targetFile)
 + ":" + normalized(title)
 ```
 
-lineStart がない場合は、`targetFile + category + description` の類似度で判定する。
+When lineStart is absent, determine duplicates by the similarity of `targetFile + category + description`.
 
-推奨アルゴリズム:
+Recommended algorithm:
 
-- 完全一致キーで一次統合。
-- 類似度判定は軽量にするため、正規化文字列の Jaccard 類似度 0.85 以上を同一候補にする。
-- 同一指摘では最高 severity を採用する。
-- `sourceAgents` はマージする。
-- description は最も長く、具体的なものを採用する。
+- Perform primary integration with exact-match keys.
+- To keep similarity evaluation lightweight, treat normalized strings with a Jaccard similarity of 0.85 or greater as duplicate candidates.
+- For duplicate findings, retain the highest severity.
+- Merge `sourceAgents`.
+- Retain the longest and most specific description.
 
-### 12.3 判定ルール
+### 12.3 Verdict Rules
 
-| 条件 | Verdict |
-|---|---|
-| Critical が 1 件以上 | `Rejected` |
-| Incomplete が 1 件以上 | `Conditional Approval` |
-| Critical なし、High あり | `Conditional Approval` |
-| Medium/Low のみ | `Approved with Notes` |
-| 指摘なし、全エージェント pass | `Approved` |
+| Condition | Verdict |
+| --- | --- |
+| One or more Critical findings | `Rejected` |
+| One or more Incomplete reviews | `Conditional Approval` |
+| No Critical findings, but one or more High findings | `Conditional Approval` |
+| Only Medium/Low findings | `Approved with Notes` |
+| No findings and all agents pass | `Approved` |
 
-## 13. 競合検出
+## 13. Conflict Detection
 
-### 13.1 定義済み競合パターン
+### 13.1 Predefined Conflict Patterns
 
-`docs/orchest-code-review.agent.md` の競合パターンを実装データとして保持する。
+Store the conflict patterns from `docs/orchest-code-review.agent.md` as implementation data.
 
-| Agent A | Agent B | パターン | 初期ルール |
-|---|---|---|---|
-| `architecture` | `java-standards` | 抽象化 vs KISS | 設計意図を参照しつつ architecture 優先 |
-| `security` | `performance` | 制限追加 vs 制限緩和 | 原則 security 優先 |
-| `data-access` | `performance` | 正規化/制約 vs 非正規化/緩和 | 明確な理由がない限り data-access 優先 |
-| `java-standards` | `test-quality` | Java 21 機能 vs テスタビリティ | テスタビリティを損なわない範囲で Java 21 |
-| `resilience` | `performance` | retry 追加 vs latency 削減 | 冪等操作のみ retry 許容 |
-| `ddd-domain` | `data-access` | 集約境界 vs クエリ効率 | DDD 境界優先、効率は別解で対処 |
+| Agent A | Agent B | Pattern | Initial Rule |
+| --- | --- | --- | --- |
+| `architecture` | `java-standards` | Abstraction vs KISS | Prefer architecture while considering design intent |
+| `security` | `performance` | Add restrictions vs relax restrictions | Prefer security in principle |
+| `data-access` | `performance` | Normalization/constraints vs denormalization/relaxation | Prefer data-access unless there is a clear reason not to |
+| `java-standards` | `test-quality` | Java 21 features vs testability | Use Java 21 to the extent that testability is not impaired |
+| `resilience` | `performance` | Add retries vs reduce latency | Allow retries only for idempotent operations |
+| `ddd-domain` | `data-access` | Aggregate boundaries vs query efficiency | Prefer DDD boundaries and address efficiency with an alternative solution |
 
-### 13.2 検出ロジック
+### 13.2 Detection Logic
 
-競合は次の条件で候補化する。
+Identify a conflict candidate when the following conditions apply.
 
-- 同じ `targetFile` または同じ機能領域を指している。
-- `sourceAgents` の組み合わせが定義済み競合パターンに一致する。
-- finding の `title` または `description` に相反語が含まれる。
+- The findings refer to the same `targetFile` or functional area.
+- The `sourceAgents` combination matches a predefined conflict pattern.
+- The finding `title` or `description` contains opposing terms.
 
-相反語の例:
+Examples of opposing terms:
 
 ```text
 add/remove
@@ -1145,24 +1145,24 @@ retry/no retry
 cache/no cache
 ```
 
-### 13.3 未定義競合
+### 13.3 Undefined Conflicts
 
-未定義でも、同じファイル同じ行に対して相反する修正提案がある場合は競合候補にする。Tech Lead に裁定を依頼し、裁定不能なら human escalation として扱う。
+Even when no pattern is predefined, treat opposing fix proposals for the same line in the same file as a conflict candidate. Request adjudication from the Tech Lead; if adjudication is impossible, treat it as a human escalation.
 
-## 14. レポート設計
+## 14. Report Design
 
-### 14.1 保存先
+### 14.1 Output Location
 
-`docs/orchest-code-review.agent.md` の規則に合わせる。
+Follow the rules in `docs/orchest-code-review.agent.md`.
 
 ```text
 ../review-reports/code-review/<target-name>/check-report-<N>.md
 ../review-reports/code-review/<target-name>/check-report-<N>.json
 ```
 
-`<N>` は同一 target 配下の既存 `check-report-*.md` を走査し、最大値 + 1 とする。
+Determine `<N>` by scanning existing `check-report-*.md` files under the same target and adding 1 to the maximum value.
 
-### 14.2 Markdown レポート構成
+### 14.2 Markdown Report Structure
 
 ```markdown
 # Source Code Review Integrated Report
@@ -1201,9 +1201,9 @@ cache/no cache
 ## Individual Agent Detail Reports
 ```
 
-### 14.3 JSON レポート
+### 14.3 JSON Report
 
-JSON レポートは CI/CD やダッシュボード連携用に保存する。Markdown と同じ情報を機械可読形式で保持する。
+Save the JSON report for CI/CD and dashboard integration. It retains the same information as the Markdown report in machine-readable form.
 
 ```typescript
 export interface IntegratedReviewReport {
@@ -1232,9 +1232,9 @@ export interface IntegratedReviewReport {
 }
 ```
 
-## 15. CI/CD 連携
+## 15. CI/CD Integration
 
-### 15.1 GitHub Actions 例
+### 15.1 GitHub Actions Example
 
 ```yaml
 name: Java Code Review
@@ -1261,13 +1261,13 @@ jobs:
           CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
 ```
 
-### 15.2 PR 差分レビュー
+### 15.2 PR Diff Review
 
-将来拡張として `--target changed` を追加できる。現時点の必須範囲には含めないが、設計上 `ReviewTarget` がファイル配列を持つため容易に追加可能。
+`--target changed` may be added as a future extension. It is not currently required, but the design makes it easy to add because `ReviewTarget` contains a file array.
 
-## 16. ロギング
+## 16. Logging
 
-標準出力には進捗と最終結果のみを出す。
+Write only progress and final results to standard output.
 
 ```text
 [review] target resolved: full, 128 files
@@ -1278,35 +1278,35 @@ jobs:
 [review] report written: ../review-reports/code-review/full/check-report-3.md
 ```
 
-`--verbose` 指定時のみ、プロンプト長、SDK イベント、失敗詳細を出す。
+Emit prompt length, SDK events, and failure details only when `--verbose` is specified.
 
-秘密情報保護のため、環境変数値や API キーはログに出力しない。
+To protect secrets, do not write environment variable values or API keys to logs.
 
-### 16.1 SDK イベント監査ログ
+### 16.1 SDK Event Audit Log
 
-`runStreamed()` から得られる `ThreadEvent` は、必要最小限を JSONL で保存できるようにする。
+Allow the minimum necessary subset of `ThreadEvent` data obtained from `runStreamed()` to be saved as JSONL.
 
-保存先:
+Output location:
 
 ```text
 ../review-reports/code-review/<target-name>/check-report-<N>.events.jsonl
 ```
 
-保存対象:
+Events to persist:
 
-| Event | 保存内容 |
-|---|---|
-| `thread.started` | agentId、thread_id |
-| `turn.started` | agentId、timestamp |
-| `item.completed` | agentId、item.type、command の exit_code、file_change の status、error message |
+| Event | Persisted Content |
+| --- | --- |
+| `thread.started` | agentId, thread_id |
+| `turn.started` | agentId, timestamp |
+| `item.completed` | agentId, item.type, command exit_code, file_change status, error message |
 | `turn.completed` | usage |
-| `turn.failed` / `error` | error message |
+| `turn.failed` / `error` | Error message |
 
-`reasoning` item の全文、command output の全文、環境変数、秘密情報らしき文字列は保存しない。詳細ログは `--verbose` かつローカル実行時のみ出力する。
+Do not persist full `reasoning` items, full command output, environment variables, or strings that appear to contain secrets. Emit detailed logs only during local execution with `--verbose`.
 
-## 17. エラー設計
+## 17. Error Design
 
-### 17.1 エラー型
+### 17.1 Error Type
 
 ```typescript
 export class CliError extends Error {
@@ -1319,90 +1319,90 @@ export class CliError extends Error {
 }
 ```
 
-### 17.2 代表エラー
+### 17.2 Representative Errors
 
-| エラー | 発生条件 | 終了コード |
-|---|---|---:|
-| `InvalidAgentSelectionError` | 未知のエージェント指定 | `2` |
-| `AgentDefinitionMissingError` | 必須定義ファイル不足 | `2` |
-| `TargetNotFoundError` | 対象パスなし | `3` |
-| `NoReviewableFilesError` | 対象ファイル 0 件 | `3` |
-| `AllAgentsFailedError` | 全レビュー失敗 | `4` |
-| `ReportWriteError` | レポート保存失敗 | `5` |
+| Error | Condition | Exit Code |
+| --- | --- | ---: |
+| `InvalidAgentSelectionError` | Unknown agent selection | `2` |
+| `AgentDefinitionMissingError` | Required definition file is missing | `2` |
+| `TargetNotFoundError` | Target path does not exist | `3` |
+| `NoReviewableFilesError` | Zero target files | `3` |
+| `AllAgentsFailedError` | All reviews failed | `4` |
+| `ReportWriteError` | Report persistence failed | `5` |
 
-### 17.3 CLI バリデーション一覧
+### 17.3 CLI Validation List
 
-起動直後に次を検証し、Codex SDK 実行前に失敗させる。
+Validate the following immediately after startup and fail before executing the Codex SDK.
 
-| 検証 | 失敗時 |
-|---|---|
-| `--target` と `--target-dir` の片方だけが指定されている | exit `2` |
+| Validation | On Failure |
+| --- | --- |
+| Exactly one of `--target` and `--target-dir` is specified | exit `2` |
 | `--concurrency >= 1` | exit `2` |
 | `--timeout-ms >= 1000` | exit `2` |
-| `--sandbox` が許可値である | exit `2` |
-| `--web-search` が許可値である | exit `2` |
-| `--reasoning` が許可値である | exit `2` |
-| `--format` が許可値である | exit `2` |
-| `--fail-on` が許可値である | exit `2` |
-| `--agents` が既知エージェントまたは `full` である | exit `2` |
-| `--repo` が存在するディレクトリである | exit `2` |
-| `--docs` が存在するディレクトリである | exit `2` |
-| target が存在する | exit `3` |
-| target にレビュー可能ファイルが 1 件以上ある | exit `3` |
+| `--sandbox` is an allowed value | exit `2` |
+| `--web-search` is an allowed value | exit `2` |
+| `--reasoning` is an allowed value | exit `2` |
+| `--format` is an allowed value | exit `2` |
+| `--fail-on` is an allowed value | exit `2` |
+| `--agents` is a known agent or `full` | exit `2` |
+| `--repo` is an existing directory | exit `2` |
+| `--docs` is an existing directory | exit `2` |
+| The target exists | exit `3` |
+| The target contains at least one reviewable file | exit `3` |
 
-## 18. 品質要件
+## 18. Quality Requirements
 
-### 18.1 実装方針
+### 18.1 Implementation Policy
 
-- TypeScript は `strict: true`。
-- public 関数には明確な型を付ける。
-- `any` は原則禁止。外部 SDK の戻り値など避けられない場合は境界で正規化する。
-- 副作用を持つ処理と純粋な処理を分離する。
-- Codex SDK 呼び出しは `codex/review-runner.ts` に閉じ込める。
-- エージェント定義、対象解決、統合、レポート生成は単体テスト可能な純粋関数中心にする。
-- ファイルパスは内部では絶対パス、レポート表示ではリポジトリ相対パスに正規化する。
+- Set TypeScript to `strict: true`.
+- Give public functions explicit types.
+- Prohibit `any` in principle. When unavoidable, such as for values returned by an external SDK, normalize it at the boundary.
+- Separate side-effecting operations from pure operations.
+- Isolate Codex SDK invocations in `codex/review-runner.ts`.
+- Implement agent definitions, target resolution, integration, and report generation primarily as pure functions that can be unit tested.
+- Use absolute file paths internally and normalize them to repository-relative paths for report display.
 
-### 18.2 セキュリティ
+### 18.2 Security
 
-- レビュー対象コードを変更しない。
-- API キーや環境変数値をログに出さない。
-- レポートに含める evidence は対象ソースの必要最小限の抜粋にする。
-- `--repo` で指定された範囲外のファイルをレビュー対象に含めない。
-- レポート保存先は `--out` で明示可能にし、既存レポートを上書きしない。
+- Do not modify the code under review.
+- Do not log API keys or environment variable values.
+- Limit evidence included in reports to the minimum necessary excerpt from the target source.
+- Do not include files outside the scope specified by `--repo` in the review target.
+- Allow the report destination to be specified explicitly with `--out`, and do not overwrite existing reports.
 
-### 18.3 OSS 公開品質
+### 18.3 OSS Publication Quality
 
-最低限次を用意する。
+Provide at least the following.
 
-- `README.md`: インストール、使い方、必要な環境変数、CI 例
-- `LICENSE`: OSS 公開時のライセンス
-- `CONTRIBUTING.md`: コントリビューション方法
+- `README.md`: Installation, usage, required environment variables, and CI examples
+- `LICENSE`: License for OSS publication
+- `CONTRIBUTING.md`: Contribution instructions
 - `npm run lint`
 - `npm run test`
 - `npm run build`
-- サンプルレポート
-- エージェント定義の追加方法
+- Sample report
+- Instructions for adding agent definitions
 
-## 19. テスト計画
+## 19. Test Plan
 
-### 19.1 単体テスト
+### 19.1 Unit Tests
 
-| 対象 | テスト内容 |
-|---|---|
-| AgentDefinitionLoader | front matter 抽出、欠損検出、ID 正規化 |
-| AgentRegistry | `full` 展開、単一/複数指定、不明名エラー |
-| TargetResolver | `full`、`--target-dir`、`--target` ディレクトリ、ファイル指定、repo 外パス拒否、除外ディレクトリ |
-| CliValidator | target 同時指定拒否、数値範囲、enum 値、repo/docs 存在確認 |
-| PromptBuilder | エージェント定義と対象情報が含まれること |
-| ReviewRunner | SDK event から finalResponse、usage、threadId を正規化すること |
-| FindingDeduplicator | 同一指摘統合、severity 最大化、sourceAgents マージ |
-| ConflictDetector | 定義済み競合、未定義競合候補 |
-| VerdictCalculator | Critical、High、Incomplete、指摘なしの判定 |
-| ReportWriter | 採番、上書き回避、Markdown/JSON 保存 |
+| Target | Test Coverage |
+| --- | --- |
+| AgentDefinitionLoader | Front matter extraction, missing-data detection, and ID normalization |
+| AgentRegistry | `full` expansion, single/multiple selection, and unknown-name errors |
+| TargetResolver | `full`, `--target-dir`, `--target` directory, file selection, rejection of paths outside the repo, and excluded directories |
+| CliValidator | Reject simultaneous target options, numeric ranges, enum values, and repo/docs existence checks |
+| PromptBuilder | Includes the agent definition and target information |
+| ReviewRunner | Normalizes finalResponse, usage, and threadId from SDK events |
+| FindingDeduplicator | Merges duplicate findings, maximizes severity, and merges sourceAgents |
+| ConflictDetector | Predefined conflicts and undefined conflict candidates |
+| VerdictCalculator | Critical, High, Incomplete, and no-finding decisions |
+| ReportWriter | Sequence numbering, overwrite prevention, and Markdown/JSON persistence |
 
-### 19.2 結合テスト
+### 19.2 Integration Tests
 
-Codex SDK を直接呼ぶテストはコストと外部依存があるため、`ReviewRunner` に interface を設け、通常テストでは Fake runner を使う。
+Because tests that invoke the Codex SDK directly incur cost and external dependencies, define an interface for `ReviewRunner` and use a Fake runner in regular tests.
 
 ```typescript
 export interface AgentRunner {
@@ -1410,119 +1410,119 @@ export interface AgentRunner {
 }
 ```
 
-結合テストでは次を確認する。
+Verify the following in integration tests.
 
-- 3 エージェント指定で 3 件のジョブが生成される。
-- `full` 指定で 14 件のジョブが生成される。
-- `--target-dir` 指定で対象ディレクトリ配下のファイルだけが job prompt に含まれる。
-- 1 件 timeout してもレポートが生成される。
-- conflict がある場合だけ Tech Lead 裁定ジョブが追加される。
-- Fake runner が不正 JSON を返した場合、対象エージェントが Incomplete になり、全体レポートが生成される。
+- Selecting 3 agents generates 3 jobs.
+- Selecting `full` generates 14 jobs.
+- With `--target-dir`, only files under the target directory are included in the job prompt.
+- A report is generated even when one job times out.
+- A Tech Lead adjudication job is added only when a conflict exists.
+- If the Fake runner returns invalid JSON, the relevant agent becomes Incomplete and the overall report is generated.
 
-### 19.3 E2E テスト
+### 19.3 E2E Tests
 
-小さな Java/Spring Boot fixture を作成し、Fake Codex runner で CLI からレポート生成まで確認する。
+Create a small Java/Spring Boot fixture and use a Fake Codex runner to verify the flow from the CLI through report generation.
 
-本物の Codex SDK を使う E2E は任意で、CI では環境変数 `RUN_CODEX_E2E=true` のときだけ実行する。
+E2E tests using the real Codex SDK are optional and must run in CI only when the environment variable `RUN_CODEX_E2E=true` is set.
 
-## 20. 実装ステップ
+## 20. Implementation Steps
 
-### Phase 1: CLI と静的処理
+### Phase 1: CLI and Static Processing
 
-1. `package.json`、`tsconfig.json`、基本ディレクトリを作成する。
-2. CLI 引数解析を実装する。
-3. エージェント定義ローダーを実装する。
-4. 対象ファイル解決を実装する。
-5. dry-run を実装する。
+1. Create `package.json`, `tsconfig.json`, and the basic directories.
+2. Implement CLI argument parsing.
+3. Implement the agent definition loader.
+4. Implement target file resolution.
+5. Implement dry-run.
 
-### Phase 2: Codex SDK レビュー実行
+### Phase 2: Codex SDK Review Execution
 
-1. `@openai/codex-sdk` を導入する。
-2. `CodexClientFactory` を実装する。
-3. `ReviewRunner` を実装する。
-4. 構造化出力スキーマを適用する。
-5. timeout と error handling を実装する。
+1. Add `@openai/codex-sdk`.
+2. Implement `CodexClientFactory`.
+3. Implement `ReviewRunner`.
+4. Apply the structured output schema.
+5. Implement timeout and error handling.
 
-### Phase 3: 統合と裁定
+### Phase 3: Integration and Adjudication
 
-1. 結果正規化を実装する。
-2. 重複排除を実装する。
-3. 競合検出を実装する。
-4. Tech Lead 裁定実行を実装する。
-5. verdict 計算を実装する。
+1. Implement result normalization.
+2. Implement deduplication.
+3. Implement conflict detection.
+4. Implement Tech Lead adjudication execution.
+5. Implement verdict calculation.
 
-### Phase 4: レポートと CI 対応
+### Phase 4: Reports and CI Support
 
-1. Markdown レポート生成を実装する。
-2. JSON レポート生成を実装する。
-3. report writer の採番と保存を実装する。
-4. README と GitHub Actions 例を整備する。
-5. テスト、lint、build を通す。
+1. Implement Markdown report generation.
+2. Implement JSON report generation.
+3. Implement report writer sequence numbering and persistence.
+4. Prepare the README and GitHub Actions example.
+5. Ensure tests, lint, and build pass.
 
-## 21. 受け入れ基準
+## 21. Acceptance Criteria
 
-次を満たしたら実装完了とする。
+Implementation is complete when all of the following criteria are met.
 
-- `code-review --target full --agents full` で 14 エージェントが最大 7 並列で実行される。
-- `code-review --target <path> --agents security` で単一エージェントのみ実行される。
-- `code-review --target-dir <directory> --agents security` で指定ディレクトリ配下のみレビューされる。
-- `code-review --target <path> --agents security,performance,data-access` で指定 3 エージェントのみ実行される。
-- `--target` と `--target-dir` を同時指定した場合は終了コード `2` で停止する。
-- 1 エージェントが失敗しても他のレビュー結果でレポートが生成される。
-- Critical が 1 件以上ある場合、最終 verdict は `Rejected` になる。
-- High のみの場合、最終 verdict は `Conditional Approval` になる。
-- 指摘が Medium/Low のみの場合、最終 verdict は `Approved with Notes` になる。
-- 競合候補がある場合、Tech Lead の裁定が別スレッドで実行される。
-- レポートは `../review-reports/code-review/<target-name>/check-report-<N>.md` に保存され、既存ファイルを上書きしない。
-- JSON レポートも保存され、CI/CD やダッシュボードで利用できる。
-- 各エージェント結果に Codex `threadId` と usage が記録される。
-- timeout 時は `AbortSignal` により Codex SDK 実行がキャンセルされる。
-- review 実行は `sandboxMode: "read-only"` と `approvalPolicy: "never"` を既定とする。
-- structured output の JSON parse と Zod 検証に失敗した結果は Incomplete として扱われる。
-- `npm run build`、`npm run lint`、`npm run test` が成功する。
+- `code-review --target full --agents full` runs 14 agents with a maximum concurrency of 7.
+- `code-review --target <path> --agents security` runs only one agent.
+- `code-review --target-dir <directory> --agents security` reviews only the contents of the specified directory.
+- `code-review --target <path> --agents security,performance,data-access` runs only the specified 3 agents.
+- Specifying `--target` and `--target-dir` together stops with exit code `2`.
+- If one agent fails, a report is still generated from the other review results.
+- If one or more Critical findings exist, the final verdict is `Rejected`.
+- If there are only High findings, the final verdict is `Conditional Approval`.
+- If there are only Medium/Low findings, the final verdict is `Approved with Notes`.
+- If a conflict candidate exists, Tech Lead adjudication runs in a separate thread.
+- The report is saved to `../review-reports/code-review/<target-name>/check-report-<N>.md` without overwriting existing files.
+- A JSON report is also saved for use by CI/CD and dashboards.
+- Each agent result records the Codex `threadId` and usage.
+- On timeout, `AbortSignal` cancels Codex SDK execution.
+- Review execution defaults to `sandboxMode: "read-only"` and `approvalPolicy: "never"`.
+- Results that fail structured output JSON parsing or Zod validation are treated as Incomplete.
+- `npm run build`, `npm run lint`, and `npm run test` succeed.
 
-## 22. 設計網羅性チェック
+## 22. Design Completeness Check
 
-本設計書は、実装に必要な次の詳細を網羅する。
+This design document covers the following implementation details.
 
-| 領域 | 網羅状況 |
-|---|---|
-| CLI 仕様 | target、target-dir、agents、repo、docs、out、concurrency、timeout、model、reasoning、sandbox、web search、format、fail-on を定義 |
-| エージェント管理 | `docs/*.agent.md` の読み込み、front matter 解析、14 エージェント検証、`full` 展開を定義 |
-| レビュー対象解決 | full、ファイル、target-dir、Java、pom、application 設定、Flyway、Docker 対象と除外ディレクトリを定義 |
-| Codex SDK 利用 | `Codex`、`startThread`、`resumeThread`、`runStreamed`、`outputSchema`、`AbortSignal`、`ThreadOptions`、usage、events を定義 |
-| マルチ・エージェント実行 | エージェントごとの独立 thread、最大 7 並列、`Promise.allSettled`、timeout 継続を定義 |
-| 構造化結果 | Zod、JSON Schema、parse、validation、normalization を定義 |
-| 結果統合 | 重複排除、severity 最大化、sourceAgents マージ、verdict 計算を定義 |
-| 競合解決 | 定義済み競合、未定義競合、Tech Lead 別 thread 裁定を定義 |
-| レポート | Markdown、JSON、events JSONL、採番、上書き禁止、SDK 実行サマリを定義 |
-| 品質 | strict TypeScript、純粋関数分離、OSS 公開物、セキュリティ方針を定義 |
-| テスト | unit、integration、fake runner、任意の実 Codex E2E を定義 |
-| CI/CD | GitHub Actions 例、終了コード、fail-on を定義 |
+| Area | Coverage |
+| --- | --- |
+| CLI specification | Defines target, target-dir, agents, repo, docs, out, concurrency, timeout, model, reasoning, sandbox, web search, format, and fail-on |
+| Agent management | Defines loading `docs/*.agent.md`, front matter parsing, validation of 14 agents, and `full` expansion |
+| Review target resolution | Defines full, file, target-dir, Java, pom, application configuration, Flyway, and Docker targets and excluded directories |
+| Codex SDK usage | Defines `Codex`, `startThread`, `resumeThread`, `runStreamed`, `outputSchema`, `AbortSignal`, `ThreadOptions`, usage, and events |
+| Multi-agent execution | Defines independent threads per agent, maximum concurrency of 7, `Promise.allSettled`, and continuation after timeout |
+| Structured results | Defines Zod, JSON Schema, parsing, validation, and normalization |
+| Result integration | Defines deduplication, severity maximization, sourceAgents merging, and verdict calculation |
+| Conflict resolution | Defines predefined conflicts, undefined conflicts, and Tech Lead adjudication in a separate thread |
+| Reports | Defines Markdown, JSON, events JSONL, sequence numbering, overwrite prevention, and the SDK execution summary |
+| Quality | Defines strict TypeScript, pure-function separation, OSS publication artifacts, and security policy |
+| Tests | Defines unit, integration, fake runner, and optional real Codex E2E tests |
+| CI/CD | Defines the GitHub Actions example, exit codes, and fail-on |
 
-### 22.1 Codex SDK 有効活用の確認結果
+### 22.1 Codex SDK Effective-Use Verification
 
-この設計では Codex SDK を次の理由で有効に活用している。
+This design uses the Codex SDK effectively for the following reasons.
 
-- 複数の `Thread` をアプリケーション側で生成し、専門レビューを並列化している。
-- 各 thread に異なるエージェント定義 prompt を与え、独立した専門家レビューとして扱っている。
-- `outputSchema` によってレビュー結果を機械処理可能な JSON にしている。
-- `runStreamed` によって CI/CD 上の進捗、失敗、usage、thread id を取得している。
-- `sandboxMode: "read-only"` と `approvalPolicy: "never"` によってレビュー専用の安全な実行環境を作っている。
-- `AbortSignal` によって timeout を SDK 実行へ伝播している。
-- `resumeThread` の余地を残し、長時間レビューや再調査に対応できる。
+- The application creates multiple `Thread` instances and parallelizes specialist reviews.
+- Each thread receives a different agent-definition prompt and is treated as an independent specialist review.
+- `outputSchema` makes review results available as machine-processable JSON.
+- `runStreamed` obtains progress, failures, usage, and thread id in CI/CD.
+- `sandboxMode: "read-only"` and `approvalPolicy: "never"` create a secure execution environment dedicated to review.
+- `AbortSignal` propagates timeout cancellation to SDK execution.
+- The design leaves room for `resumeThread`, supporting long-running reviews and follow-up investigations.
 
-不足や曖昧さが実装時に出やすい領域は、SDK バージョンごとの `ThreadOptions` 名称、Codex CLI の sandbox 設定、structured output の細かな JSON Schema 制約である。これらは lockfile 固定と実 Codex E2E テストで検証する。
+Areas likely to expose gaps or ambiguity during implementation are the `ThreadOptions` names for each SDK version, Codex CLI sandbox settings, and detailed JSON Schema constraints for structured output. Verify these by pinning the lockfile and running real Codex E2E tests.
 
-## 23. 非目標
+## 23. Non-Goals
 
-現時点では次を実装対象外とする。
+The following are currently outside the implementation scope.
 
-- Java ソースコードの自動修正。
-- PR コメントの自動投稿。
-- GitHub Checks API 連携。
-- Web UI。
-- 差分レビュー専用の `changed` ターゲット。
-- エージェント定義そのものの自動生成。
+- Automatic modification of Java source code.
+- Automatic posting of PR comments.
+- GitHub Checks API integration.
+- Web UI.
+- A `changed` target dedicated to diff reviews.
+- Automatic generation of agent definitions.
 
-ただし、データモデルとレポート JSON はこれらの将来拡張に対応できるように設計する。
+However, design the data model and report JSON to support these future extensions.

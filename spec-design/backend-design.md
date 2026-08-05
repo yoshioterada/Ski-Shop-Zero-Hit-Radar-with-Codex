@@ -607,11 +607,11 @@ The prompt must request business-oriented advice for a ski shop administrator:
 
 The answer should be Japanese prose with clear sections:
 
-- 結論
-- 理由
-- 仕入れ候補
-- 注意点
-- 次のアクション
+- Conclusion
+- Rationale
+- Procurement candidates
+- Considerations
+- Next actions
 
 ### 9.5 Spring AI Configuration
 

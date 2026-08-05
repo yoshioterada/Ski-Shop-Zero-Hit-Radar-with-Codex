@@ -71,11 +71,11 @@ The frontend is a single Next.js application with public storefront routes and p
 
 ### 3.1 Top Page `/`
 
-#### Purpose
+#### Top Page Purpose
 
 Communicate that the site is `Codex Ski Shop` and let users quickly search ski products.
 
-#### UI Composition
+#### Top Page UI Composition
 
 - Header with `Codex Ski Shop` brand, home, products, login, and admin link when authenticated.
 - Search bar in the header or hero area.
@@ -84,7 +84,7 @@ Communicate that the site is `Codex Ski Shop` and let users quickly search ski p
 - Optional category chips based on product categories.
 - Search empty state when no product matches.
 
-#### State Design
+#### Top Page State Design
 
 | State | Behavior |
 | --- | --- |
@@ -96,11 +96,11 @@ Communicate that the site is `Codex Ski Shop` and let users quickly search ski p
 
 ### 3.2 Product List Page `/products`
 
-#### Purpose
+#### Product List Purpose
 
 Show searchable and scannable product cards using real ski manufacturer and product names.
 
-#### UI Composition
+#### Product List UI Composition
 
 - Header and navigation consistent with top page.
 - Page title and total count.
@@ -116,18 +116,18 @@ Show searchable and scannable product cards using real ski manufacturer and prod
 | `name` | Main product name |
 | `category` | Optional badge |
 | `price` | Japanese yen format, e.g. `¥98,000` |
-| `stockStatus` | Badge such as `在庫あり` |
+| `stockStatus` | Badge such as `In stock` |
 | `imageUrl` | Product image or category placeholder |
 
-`stockStatus` is received from the backend as an enum-like value such as `IN_STOCK`, `LOW_STOCK`, or `OUT_OF_STOCK`. The frontend maps it to Japanese display labels such as `在庫あり`, `残りわずか`, and `在庫なし`.
+`stockStatus` is received from the backend as an enum-like value such as `IN_STOCK`, `LOW_STOCK`, or `OUT_OF_STOCK`. The frontend maps it to display labels such as `In stock`, `Low stock`, and `Out of stock`.
 
 ### 3.3 Login Page `/login`
 
-#### Purpose
+#### Login Page Purpose
 
 Authenticate an administrator and navigate to Zero Hit Radar.
 
-#### UI Composition
+#### Login Page UI Composition
 
 - Centered login panel based on `images/login-screen.png`.
 - `Codex Ski Shop` brand title.
@@ -145,11 +145,11 @@ Authenticate an administrator and navigate to Zero Hit Radar.
 
 ### 3.4 Admin Dashboard `/admin/dashboard`
 
-#### Purpose
+#### Admin Dashboard Purpose
 
 Let administrators discover unmet demand through Zero Hit Radar and consult AI about sourcing decisions.
 
-#### UI Composition
+#### Admin Dashboard UI Composition
 
 - Admin sidebar and dashboard layout based on `images/admin-dash-board-zero-hit.png`.
 - Zero Hit Radar header.
@@ -173,7 +173,7 @@ Let administrators discover unmet demand through Zero Hit Radar and consult AI a
   - Send button.
   - Answer area.
 
-#### State Design
+#### Admin Dashboard State Design
 
 | State | Behavior |
 | --- | --- |
