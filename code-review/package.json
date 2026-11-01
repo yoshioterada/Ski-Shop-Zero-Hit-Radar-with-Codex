@@ -41,7 +41,7 @@
     "commander": "^12.1.0",
     "fast-glob": "^3.3.3",
     "gray-matter": "^4.0.3",
-    "zod": "^3.25.76",
+    "zod": "^4.6.7",
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
